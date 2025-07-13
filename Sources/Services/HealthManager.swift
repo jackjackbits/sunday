@@ -37,11 +37,13 @@ class HealthManager: ObservableObject {
     }
     
     func saveVitaminD(amount: Double, date: Date = Date()) {
+      
         guard isAuthorized else {
             requestAuthorization()
+        HapticManager.shared.vibrate(for: .error)
             return
         }
-        
+        HapticManager.shared.vibrate(for: .success)
         // Convert IU to micrograms (1 IU = 0.025 mcg)
         let micrograms = amount * 0.025
         let quantity = HKQuantity(unit: .gramUnit(with: .micro), doubleValue: micrograms)

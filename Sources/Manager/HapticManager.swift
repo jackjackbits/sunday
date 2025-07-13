@@ -22,6 +22,14 @@ final class HapticManager {
             generator.selectionChanged()
         }
     }
-   
+    
+    public func vibrate(for type:UINotificationFeedbackGenerator.FeedbackType) {
+        DispatchQueue.main.async {
+            let generator =  UINotificationFeedbackGenerator()
+            generator.prepare()
+            generator.notificationOccurred(type)
+        }
+    }
+    
     
 }
