@@ -1,14 +1,23 @@
 import WidgetKit
 import SwiftUI
 import Intents
+import Foundation
+
+// Shared number formatter for widget
+private let sharedNumberFormatter: NumberFormatter = {
+    let formatter = NumberFormatter()
+    formatter.numberStyle = .decimal
+    formatter.maximumFractionDigits = 0
+    return formatter
+}()
 
 struct Provider: IntentTimelineProvider {
     func placeholder(in context: Context) -> SimpleEntry {
-        SimpleEntry(date: Date(), uvIndex: 5.0, todaysTotal: 2500, isTracking: false, vitaminDRate: 350, locationName: "Cupertino", moonPhaseName: "Full Moon", altitude: 100, uvMultiplier: 1.01, configuration: ConfigurationIntent())
+        SimpleEntry(date: Date(), uvIndex: 5.0, todaysTotal: 2500, isTracking: false, vitaminDRate: 350, locationName: "Rome", moonPhaseName: "Full Moon", altitude: 100, uvMultiplier: 1.01, cloudCover: 20.0, configuration: ConfigurationIntent())
     }
 
     func getSnapshot(for configuration: ConfigurationIntent, in context: Context, completion: @escaping (SimpleEntry) -> ()) {
-        let entry = SimpleEntry(date: Date(), uvIndex: 5.0, todaysTotal: 2500, isTracking: false, vitaminDRate: 350, locationName: "Cupertino", moonPhaseName: "Full Moon", altitude: 100, uvMultiplier: 1.01, configuration: configuration)
+        let entry = SimpleEntry(date: Date(), uvIndex: 5.0, todaysTotal: 2500, isTracking: false, vitaminDRate: 350, locationName: "Rome", moonPhaseName: "Full Moon", altitude: 100, uvMultiplier: 1.01, cloudCover: 20.0, configuration: configuration)
         completion(entry)
     }
 
@@ -25,6 +34,7 @@ struct Provider: IntentTimelineProvider {
         var moonPhaseName = sharedDefaults?.string(forKey: "moonPhaseName") ?? ""
         let altitude = sharedDefaults?.double(forKey: "currentAltitude") ?? 0.0
         let uvMultiplier = sharedDefaults?.double(forKey: "uvMultiplier") ?? 1.0
+        let cloudCover = sharedDefaults?.double(forKey: "currentCloudCover") ?? 0.0
         
         // Provide default if empty
         if moonPhaseName.isEmpty {
@@ -35,7 +45,7 @@ struct Provider: IntentTimelineProvider {
         let currentDate = Date()
         for hourOffset in 0 ..< 5 {
             let entryDate = Calendar.current.date(byAdding: .hour, value: hourOffset, to: currentDate)!
-            let entry = SimpleEntry(date: entryDate, uvIndex: uvIndex, todaysTotal: todaysTotal, isTracking: isTracking, vitaminDRate: vitaminDRate, locationName: locationName, moonPhaseName: moonPhaseName, altitude: altitude, uvMultiplier: uvMultiplier, configuration: configuration)
+            let entry = SimpleEntry(date: entryDate, uvIndex: uvIndex, todaysTotal: todaysTotal, isTracking: isTracking, vitaminDRate: vitaminDRate, locationName: locationName, moonPhaseName: moonPhaseName, altitude: altitude, uvMultiplier: uvMultiplier, cloudCover: cloudCover, configuration: configuration)
             entries.append(entry)
         }
 
@@ -54,6 +64,7 @@ struct SimpleEntry: TimelineEntry {
     let moonPhaseName: String
     let altitude: Double
     let uvMultiplier: Double
+    let cloudCover: Double
     let configuration: ConfigurationIntent
 }
 
@@ -164,10 +175,7 @@ struct SmallWidgetView: View {
         if value < 1000 {
             return "\(Int(value))"
         } else if value < 10000 {
-            let formatter = NumberFormatter()
-            formatter.numberStyle = .decimal
-            formatter.maximumFractionDigits = 0
-            return formatter.string(from: NSNumber(value: value)) ?? "\(Int(value))"
+            return sharedNumberFormatter.string(from: NSNumber(value: value)) ?? "\(Int(value))"
         } else {
             return String(format: "%.0fK", value / 1000)
         }
@@ -191,7 +199,7 @@ struct MediumWidgetView: View {
                                 .font(.system(size: 10, weight: .medium))
                                 .foregroundColor(.white.opacity(0.7))
                             Text(String(format: "%.1f", entry.uvIndex))
-                                .font(.system(size: 42, weight: .bold))
+                                .font(.system(size: 48, weight: .bold))
                                 .foregroundColor(.white)
                         }
                         
@@ -221,7 +229,7 @@ struct MediumWidgetView: View {
                                             .font(.system(size: 18, weight: .semibold))
                                             .foregroundColor(.white)
                                         Text("IU/min")
-                                            .font(.system(size: 9))
+                                            .font(.system(size: 11))
                                             .foregroundColor(.white.opacity(0.8))
                                     }
                                 }
@@ -235,10 +243,10 @@ struct MediumWidgetView: View {
                     if entry.uvIndex > 0 {
                         Link(destination: URL(string: "sunday://toggle")!) {
                             VStack(spacing: 4) {
-                                Image(systemName: entry.isTracking ? "stop.circle.fill" : "sun.max.fill")
+                                Image(systemName: entry.isTracking ? "stop.circle.fill" : "sun.max.circle.fill")
                                     .font(.system(size: 44))
-                                    .foregroundColor(entry.isTracking ? .white : .yellow)
-                                Text(entry.isTracking ? "Stop" : "Start")
+                                    .foregroundColor(.white)
+                                Text(entry.isTracking ? "End" : "Begin")
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(.white.opacity(0.8))
                             }
@@ -259,11 +267,11 @@ struct MediumWidgetView: View {
                 
                 Spacer()
                 
-                // Bottom: Location info centered
-                HStack {
-                    Spacer()
-                    HStack(spacing: 6) {
-                        if !entry.locationName.isEmpty {
+                // Bottom info line: location, elevation, cloud
+                HStack(spacing: 12) {
+                    // Location with flexible space
+                    if !entry.locationName.isEmpty {
+                        HStack(spacing: 4) {
                             Image(systemName: "location.fill")
                                 .font(.system(size: 9))
                                 .foregroundColor(.white.opacity(0.6))
@@ -271,30 +279,46 @@ struct MediumWidgetView: View {
                                 .font(.system(size: 11, weight: .medium))
                                 .foregroundColor(.white.opacity(0.8))
                                 .lineLimit(1)
+                                .truncationMode(.tail)
+                                .layoutPriority(0)
                         }
-                        
-                        if entry.altitude > 0 {
-                            Text("•")
-                                .font(.system(size: 8))
-                                .foregroundColor(.white.opacity(0.4))
+                        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                    }
+                    
+                    // Elevation with fixed space
+                    if entry.altitude > 0 {
+                        HStack(spacing: 4) {
                             Image(systemName: "arrow.up.to.line")
-                                .font(.system(size: 9))
+                                .font(.system(size: 10))
                                 .foregroundColor(.white.opacity(0.6))
                             Text("\(Int(entry.altitude))m")
                                 .font(.system(size: 11, weight: .medium))
                                 .foregroundColor(.white.opacity(0.6))
+                            if entry.uvMultiplier > 1.0 {
+                                Text("(+\(Int((entry.uvMultiplier - 1.0) * 100))%)")
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundColor(.white.opacity(0.5))
+                            }
                         }
-                        
-                        if entry.uvMultiplier > 1.0 {
-                            Text("(+\(Int((entry.uvMultiplier - 1.0) * 100))% UV)")
+                        .layoutPriority(1)
+                    }
+                    
+                    // Cloud cover with fixed space
+                    if entry.cloudCover > 0 {
+                        HStack(spacing: 4) {
+                            Image(systemName: "cloud.fill")
+                                .font(.system(size: 10))
+                                .foregroundColor(.white.opacity(0.6))
+                            Text("\(Int(entry.cloudCover))%")
                                 .font(.system(size: 11, weight: .medium))
                                 .foregroundColor(.white.opacity(0.6))
                         }
+                        .layoutPriority(1)
                     }
-                    Spacer()
                 }
+                .padding(.top, 6)
             }
-            .padding()
+            .padding(12)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .containerBackground(for: .widget) {
@@ -332,10 +356,7 @@ struct MediumWidgetView: View {
         if value < 1000 {
             return "\(Int(value))"
         } else if value < 10000 {
-            let formatter = NumberFormatter()
-            formatter.numberStyle = .decimal
-            formatter.maximumFractionDigits = 0
-            return formatter.string(from: NSNumber(value: value)) ?? "\(Int(value))"
+            return sharedNumberFormatter.string(from: NSNumber(value: value)) ?? "\(Int(value))"
         } else {
             return String(format: "%.0fK", value / 1000)
         }
@@ -429,7 +450,7 @@ struct SundayWidget: Widget {
 
 struct SundayWidget_Previews: PreviewProvider {
     static var previews: some View {
-        SundayWidgetEntryView(entry: SimpleEntry(date: Date(), uvIndex: 5.0, todaysTotal: 2500, isTracking: false, vitaminDRate: 350, locationName: "Cupertino", moonPhaseName: "Full Moon", altitude: 100, uvMultiplier: 1.01, configuration: ConfigurationIntent()))
+        SundayWidgetEntryView(entry: SimpleEntry(date: Date(), uvIndex: 5.0, todaysTotal: 2500, isTracking: false, vitaminDRate: 350, locationName: "Rome", moonPhaseName: "Full Moon", altitude: 100, uvMultiplier: 1.01, cloudCover: 20.0, configuration: ConfigurationIntent()))
             .previewContext(WidgetPreviewContext(family: .systemSmall))
     }
 }

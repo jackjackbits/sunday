@@ -3,6 +3,7 @@ import Combine
 import HealthKit
 import UserNotifications
 import WidgetKit
+import UIKit
 
 enum ClothingLevel: Int, CaseIterable {
     case none = -1
@@ -101,6 +102,9 @@ class VitaminDCalculator: ObservableObject {
     private var healthKitSkinType: SkinType?
     private var lastUpdateTime: Date?
     private let sharedDefaults = UserDefaults(suiteName: "group.sunday.widget")
+    private var appActiveObserver: NSObjectProtocol?
+    private var appBackgroundObserver: NSObjectProtocol?
+    private var wasTrackingBeforeBackground = false
     
     // UV response curve parameters
     private let uvHalfMax = 4.0  // UV index for 50% vitamin D synthesis rate (more linear)
@@ -108,6 +112,16 @@ class VitaminDCalculator: ObservableObject {
     
     init() {
         loadUserPreferences()
+        setupAppLifecycleObservers()
+    }
+    
+    deinit {
+        if let observer = appActiveObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        if let observer = appBackgroundObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
     
     func setHealthManager(_ healthManager: HealthManager) {
@@ -139,6 +153,43 @@ class VitaminDCalculator: ObservableObject {
         
         if let savedAge = UserDefaults.standard.object(forKey: "userAge") as? Int {
             userAge = savedAge
+        }
+    }
+    
+    private func setupAppLifecycleObservers() {
+        appBackgroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self = self else { return }
+            // Save tracking state and pause timer
+            self.wasTrackingBeforeBackground = self.isInSun
+            if self.isInSun {
+                self.timer?.invalidate()
+                self.timer = nil
+            }
+        }
+        
+        appActiveObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self = self else { return }
+            // Resume timer if was tracking
+            if self.wasTrackingBeforeBackground && self.isInSun && self.timer == nil {
+                // Resume with 1-second timer
+                self.timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+                    guard let self = self else { return }
+                    let currentUV = self.lastUV
+                    self.updateVitaminD(uvIndex: currentUV)
+                    self.updateMEDExposure(uvIndex: currentUV)
+                }
+                // Update immediately
+                self.updateVitaminD(uvIndex: self.lastUV)
+                self.updateMEDExposure(uvIndex: self.lastUV)
+            }
         }
     }
     
@@ -344,7 +395,7 @@ class VitaminDCalculator: ObservableObject {
             guard granted else { return }
             
             let content = UNMutableNotificationContent()
-            content.title = "⚠️ Approaching burn limit!"
+            content.title = "🔥 Approaching burn limit!"
             content.body = "You've reached 80% of your burn threshold. Consider seeking shade."
             content.sound = .default
             

@@ -152,8 +152,8 @@ class UVService: ObservableObject {
         
         // Open-Meteo API - completely free, no API key needed!
         // Include elevation for more accurate UV calculations
-        // Get 5 days of data for offline caching
-        let urlString = "https://api.open-meteo.com/v1/forecast?latitude=\(latitude)&longitude=\(longitude)&elevation=\(altitude)&daily=uv_index_max,uv_index_clear_sky_max,sunrise,sunset&hourly=uv_index,cloud_cover&timezone=auto&forecast_days=5"
+        // Get 2 days of data (today and tomorrow) to reduce bandwidth
+        let urlString = "https://api.open-meteo.com/v1/forecast?latitude=\(latitude)&longitude=\(longitude)&elevation=\(altitude)&daily=uv_index_max,uv_index_clear_sky_max,sunrise,sunset&hourly=uv_index,cloud_cover&timezone=auto&forecast_days=2"
         
         guard let url = URL(string: urlString) else {
             lastError = "Invalid URL"
@@ -193,7 +193,7 @@ class UVService: ObservableObject {
                     // Parse sunrise and sunset times for today and tomorrow
                     let formatter = DateFormatter()
                     formatter.dateFormat = "yyyy-MM-dd'T'HH:mm"
-                    formatter.timeZone = TimeZone.current // Use local timezone
+                    formatter.timeZone = TimeZone.current
                     
                     // Today's times
                     if response.daily.sunrise.count > 0,
@@ -253,6 +253,8 @@ class UVService: ObservableObject {
                     if let cloudCover = response.hourly?.cloudCover,
                        hour < cloudCover.count {
                         self.currentCloudCover = cloudCover[hour]
+                        // Share with widget
+                        sharedDefaults?.set(self.currentCloudCover, forKey: "currentCloudCover")
                     }
                     
                     // Calculate safe exposure times
@@ -265,6 +267,9 @@ class UVService: ObservableObject {
                     if self.isOfflineMode {
                         self.isOfflineMode = false
                     }
+                    
+                    // Trigger widget update
+                    WidgetCenter.shared.reloadAllTimelines()
                     
                     // Cache the data for offline use
                     self.cacheUVData(response: response, location: location)
@@ -326,7 +331,7 @@ class UVService: ObservableObject {
             guard granted else { return }
             
             // Remove old notifications
-            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["sunrise", "sunset", "safeTimeReached"])
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["sunrise", "sunset", "safeTimeReached", "solarNoon"])
             
             DispatchQueue.main.async {
                 self.scheduleNotification(
@@ -342,6 +347,25 @@ class UVService: ObservableObject {
                     body: "Check your vitamin D progress in Sun Day.",
                     identifier: "sunset"
                 )
+                
+                // Schedule solar noon notification (30 minutes before)
+                if let sunrise = self.todaySunrise, let sunset = self.todaySunset {
+                    // Calculate solar noon as midpoint between sunrise and sunset
+                    let sunriseTime = sunrise.timeIntervalSince1970
+                    let sunsetTime = sunset.timeIntervalSince1970
+                    let solarNoonTime = (sunriseTime + sunsetTime) / 2.0
+                    let solarNoon = Date(timeIntervalSince1970: solarNoonTime)
+                    
+                    // Schedule notification 30 minutes before solar noon
+                    let notificationTime = solarNoon.addingTimeInterval(-1800) // 30 minutes = 1800 seconds
+                    
+                    self.scheduleNotification(
+                        at: notificationTime,
+                        title: "☀️ Solar noon approaching!",
+                        body: "Peak UV in 30 minutes (UV \(Int(self.maxUV))). Perfect time for vitamin D!",
+                        identifier: "solarNoon"
+                    )
+                }
                 
                 UserDefaults.standard.set(Date(), forKey: lastScheduledKey)
                 self.notificationScheduled = true
@@ -387,7 +411,7 @@ class UVService: ObservableObject {
         URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
             guard let self = self else { return }
             
-            if let error = error { 
+            if error != nil { 
                 // Set a default moon phase on error
                 DispatchQueue.main.async {
                     self.currentMoonPhaseName = "Waxing Crescent"
@@ -480,10 +504,12 @@ class UVService: ObservableObject {
             // Parse sunrise/sunset
             let sunriseString = response.daily.sunrise[safe: index] ?? ""
             let sunsetString = response.daily.sunset[safe: index] ?? ""
-            formatter.dateFormat = "yyyy-MM-dd'T'HH:mm"
             
-            let sunrise = formatter.date(from: sunriseString) ?? date
-            let sunset = formatter.date(from: sunsetString) ?? date
+            let sunriseFormatter = DateFormatter()
+            sunriseFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm"
+            sunriseFormatter.timeZone = TimeZone.current
+            let sunrise = sunriseFormatter.date(from: sunriseString) ?? date
+            let sunset = sunriseFormatter.date(from: sunsetString) ?? date
             
             // Create or update cached data
             let cachedData = CachedUVData(
@@ -503,6 +529,8 @@ class UVService: ObservableObject {
         // Save context
         do {
             try modelContext.save()
+            // Clean up old cached data
+            cleanupOldCachedData()
         } catch {
             // Failed to cache UV data
         }
@@ -580,6 +608,8 @@ class UVService: ObservableObject {
                     currentUV = todayData.hourlyUV[hour] * uvMultiplier
                     if hour < todayData.hourlyCloudCover.count {
                         currentCloudCover = todayData.hourlyCloudCover[hour]
+                        // Share with widget
+                        sharedDefaults?.set(currentCloudCover, forKey: "currentCloudCover")
                     }
                 }
                 
@@ -596,6 +626,9 @@ class UVService: ObservableObject {
                 
                 calculateSafeExposureTimes()
                 checkVitaminDWinter()
+                
+                // Trigger widget update
+                WidgetCenter.shared.reloadAllTimelines()
             } else {
                 isOfflineMode = true
                 hasNoData = true
@@ -607,6 +640,33 @@ class UVService: ObservableObject {
             hasNoData = true
             // Save location for potential retry
             lastRetryLocation = location
+        }
+    }
+    
+    private func cleanupOldCachedData() {
+        guard let modelContext = modelContext else { return }
+        
+        // Delete cached data older than 7 days
+        let calendar = Calendar.current
+        let cutoffDate = calendar.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+        
+        let descriptor = FetchDescriptor<CachedUVData>(
+            predicate: #Predicate<CachedUVData> { data in
+                data.date < cutoffDate
+            }
+        )
+        
+        do {
+            let oldData = try modelContext.fetch(descriptor)
+            for data in oldData {
+                modelContext.delete(data)
+            }
+            
+            if !oldData.isEmpty {
+                try modelContext.save()
+            }
+        } catch {
+            // Failed to clean up old data
         }
     }
 }

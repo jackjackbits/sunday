@@ -2,7 +2,7 @@
 
 ## Overview
 
-Sun Day calculates vitamin D synthesis from UV exposure using a multi-factor model based on scientific research. The app aims to provide personalized, accurate estimates while remaining conservative for safety.
+Sun Day calculates vitamin D synthesis from UV exposure using a multi-factor model based on scientific research. The app aims to provide personalized, accurate estimates while remaining conservative for safety. See [citations](https://github.com/jackjackbits/sunday/blob/main/METHODOLOGY.md#references).
 
 ## Core Formula
 
@@ -129,7 +129,7 @@ Above 35° latitude, UV-B is insufficient for vitamin D synthesis during winter 
 3. **Seasonal Adjustments**: Winter UV-B availability at high latitudes
 4. **Individual Calibration**: Learn from user's actual vitamin D blood tests
 
-## References
+## Citations
 
 - Holick, M.F. (2007). "Vitamin D deficiency." New England Journal of Medicine
 - Webb, A.R. et al. (2018). "The role of sunlight exposure in determining the vitamin D status"

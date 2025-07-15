@@ -3,6 +3,7 @@ import CoreLocation
 import UIKit
 import SwiftData
 import WidgetKit
+import Combine
 
 struct ContentView: View {
     @EnvironmentObject var locationManager: LocationManager
@@ -11,14 +12,17 @@ struct ContentView: View {
     @EnvironmentObject var healthManager: HealthManager
     @EnvironmentObject var networkMonitor: NetworkMonitor
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
     
     @State private var showClothingPicker = false
     @State private var showSkinTypePicker = false
     @State private var todaysTotal: Double = 0
     @State private var currentGradientColors: [Color] = []
     @State private var showInfoSheet = false
+    @State private var lastUVUpdate: Date = UserDefaults.standard.object(forKey: "lastUVUpdate") as? Date ?? Date()
+    @State private var timerCancellable: AnyCancellable?
     
-    private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
+    private let timer = Timer.publish(every: 60, on: .main, in: .common)
     
     var body: some View {
         ZStack {
@@ -106,16 +110,47 @@ struct ContentView: View {
         .animation(.easeInOut(duration: 0.3), value: uvService.isOfflineMode)
         .onAppear {
             setupApp()
+            // Start timer when view appears
+            timerCancellable = timer.autoconnect().sink { _ in
+                updateData()
+                loadTodaysTotal()
+                // Only update gradient if colors actually changed
+                let newColors = gradientColors
+                if newColors != currentGradientColors {
+                    currentGradientColors = newColors
+                }
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
             // Check for updated skin type and adaptation when app returns to foreground
             vitaminDCalculator.setHealthManager(healthManager)
             // NetworkMonitor will automatically detect when network is restored
         }
-        .onReceive(timer) { _ in
-            updateData()
-            loadTodaysTotal()
-            currentGradientColors = gradientColors
+        .onChange(of: scenePhase) { _, newPhase in
+            switch newPhase {
+            case .active:
+                // Resume timer when app becomes active
+                timerCancellable = timer.autoconnect().sink { _ in
+                    updateData()
+                    loadTodaysTotal()
+                    // Only update gradient if colors actually changed
+                    let newColors = gradientColors
+                    if newColors != currentGradientColors {
+                        currentGradientColors = newColors
+                    }
+                }
+                // Also update data immediately when returning to foreground
+                updateData()
+                loadTodaysTotal()
+                // Restart location updates when app becomes active
+                locationManager.startUpdatingLocation()
+            case .inactive, .background:
+                // Cancel timer when app goes to background
+                timerCancellable?.cancel()
+                timerCancellable = nil
+            @unknown default:
+                break
+            }
         }
         .onChange(of: vitaminDCalculator.isInSun) {
             handleSunToggle()
@@ -365,8 +400,8 @@ struct ContentView: View {
                     .font(.system(size: 24))
                     .symbolEffect(.pulse, isActive: vitaminDCalculator.isInSun)
                 
-                Text(vitaminDCalculator.isInSun ? "Stop" : 
-                     uvService.currentUV == 0 ? "No UV available" : "Track UV exposure")
+                Text(vitaminDCalculator.isInSun ? "End" : 
+                     uvService.currentUV == 0 ? "No UV available" : "Begin")
                     .font(.system(size: 18, weight: .semibold))
             }
             .foregroundColor(.white)
@@ -587,9 +622,17 @@ struct ContentView: View {
     private func updateData() {
         guard let location = locationManager.location else { return }
         
-        // Update UV data every 5 minutes
-        if Int(Date().timeIntervalSince1970) % 300 == 0 {
+        // Update UV data every 5 minutes if needed
+        let now = Date()
+        if now.timeIntervalSince(lastUVUpdate) >= 300 {
             uvService.fetchUVData(for: location)
+            lastUVUpdate = now
+            UserDefaults.standard.set(now, forKey: "lastUVUpdate")
+            
+            // Stop high-frequency location updates after getting fresh data
+            // Switch to significant location changes for battery efficiency
+            locationManager.stopUpdatingLocation()
+            locationManager.startSignificantLocationChanges()
         }
         
         vitaminDCalculator.updateUV(uvService.currentUV)

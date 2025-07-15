@@ -32,7 +32,7 @@ targets:
         NSHealthShareUsageDescription: "Sun Day reads your health data to provide personalized vitamin D recommendations"
         NSHealthUpdateUsageDescription: "Sun Day saves your vitamin D intake data to Health app"
         UIUserInterfaceStyle: Light
-        NSUserNotificationCenterUsageDescription: "Sun Day sends reminders when the sun rises and sets to help you track vitamin D"
+        NSUserNotificationCenterUsageDescription: "Sun Day sends reminders for sunrise, sunset, and solar noon to help you track vitamin D"
         CFBundleURLTypes:
           - CFBundleURLSchemes:
               - sunday
