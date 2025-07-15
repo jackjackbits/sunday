@@ -1,6 +1,6 @@
 # Sun Day
 
-Seguimiento de rayos UV y calculadora de vitamina D para iOS.
+Seguimiento de rayos UV y calculadora de vitamina D para Android.
 
 [📖 Lee la metodologia detallada](METHODOLOGY.md) | [🔒 Politica de Privacidad](PRIVACY.md)
 
@@ -10,25 +10,21 @@ Seguimiento de rayos UV y calculadora de vitamina D para iOS.
 
 - Indice UV en tiempo real de tu ubicacion
 - Calculo de vitamina D basado en los rayos UV, el tipo de piel y la ropa
-- Visualizacion de la fase lunar por la noche
 - Horas de salida y puesta del sol
-- Guarda en Apple Health
+- Guarda en Google Fit
 - No se requieren claves de API
-- Widgets pequeños y medianos para tu pantalla de inicio
 
 ## Requisitos
 
-- iOS 17.0+
-- Solo para iPhone
-- Xcode 15+
+- Android 8.0 (Oreo) o posterior (API nivel 26+)
+- Android Studio
 
 ## Configuracion
 
 1. Clona el repositorio
-2. Ejecuta `xcodegen generate` para crear el proyecto de Xcode
-3. Abre `Sunday.xcodeproj`
-4. Selecciona tu equipo de desarrollo
-5. Compila y ejecuta
+2. Abre el proyecto en Android Studio
+3. Deja que Android Studio sincronice el proyecto y descargue las dependencias necesarias.
+4. Compila y ejecuta la aplicacion en un emulador o un dispositivo fisico.
 
 ## Uso
 
@@ -40,7 +36,6 @@ Seguimiento de rayos UV y calculadora de vitamina D para iOS.
 ## APIs utilizadas
 
 - Open-Meteo para datos UV (gratis, sin clave)
-- Farmsense para las fases lunares (gratis, sin clave)
 
 ## Licencia
 
