@@ -2,31 +2,17 @@ package com.gmolate.sunday.ui.view
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -63,6 +49,9 @@ fun ContentView(mainViewModel: MainViewModel = viewModel()) {
                     )
                 )
             )
+            .semantics {
+                contentDescription = "Pantalla principal de Sunday"
+            }
     ) {
         Column(
             modifier = Modifier
@@ -73,8 +62,8 @@ fun ContentView(mainViewModel: MainViewModel = viewModel()) {
             if (isOfflineMode) {
                 Text(text = "Offline Mode", color = Color.White)
             }
-            error?.let {
-                Text(text = it, color = Color.Red)
+            error?.let { errorMessage ->
+                Text(text = errorMessage, color = Color.Red)
             }
 
             Text(
@@ -85,7 +74,11 @@ fun ContentView(mainViewModel: MainViewModel = viewModel()) {
             Text(
                 text = String.format("%.1f", currentUv),
                 fontSize = 72.sp,
-                color = Color.White
+                color = Color.White,
+                modifier = Modifier
+                    .semantics {
+                        contentDescription = "Índice UV actual: ${String.format("%.1f", currentUv)}"
+                    }
             )
 
             Row(
@@ -99,8 +92,14 @@ fun ContentView(mainViewModel: MainViewModel = viewModel()) {
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            Button(onClick = { mainViewModel.toggleSunExposure() }) {
-                Text(text = if (isInSun) "Stop Tracking" else "Start Tracking")
+            Button(
+                onClick = { mainViewModel.toggleSunExposure() },
+                modifier = Modifier
+                    .semantics {
+                        contentDescription = if (isInSun) "Detener exposición al sol" else "Iniciar exposición al sol"
+                    }
+            ) {
+                Text(if (isInSun) "Detener" else "Iniciar")
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -116,11 +115,15 @@ fun ContentView(mainViewModel: MainViewModel = viewModel()) {
             ) {
                 ClothingSelector(
                     selected = clothingLevel,
-                    onSelected = { mainViewModel.clothingLevel.value = it }
+                    onSelected = { newLevel ->
+                        mainViewModel.updateClothingLevel(newLevel)
+                    }
                 )
                 SkinTypeSelector(
                     selected = skinType,
-                    onSelected = { mainViewModel.skinType.value = it }
+                    onSelected = { newType ->
+                        mainViewModel.updateSkinType(newType)
+                    }
                 )
             }
         }

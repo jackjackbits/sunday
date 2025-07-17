@@ -8,43 +8,103 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.gmolate.sunday.model.AppDatabase
-import com.gmolate.sunday.service.HealthManager
-import com.gmolate.sunday.service.LocationManager
-import com.gmolate.sunday.service.UVService
-import com.gmolate.sunday.service.VitaminDCalculator
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
+import com.gmolate.sunday.service.*
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
-
     private val db = AppDatabase.getDatabase(application)
     private val locationManager = LocationManager(application)
     private val healthManager = HealthManager(application)
+    private val networkMonitor = NetworkMonitor(application)
+    private val migrationService = MigrationService(application)
     private val uvService = UVService(db)
     private val vitaminDCalculator = VitaminDCalculator(healthManager)
 
-    val location: StateFlow<Location?> = locationManager.location
-    val locationName: StateFlow<String> = locationManager.locationName
-    val currentUV: StateFlow<Double> = uvService.currentUV
-    val maxUV: StateFlow<Double> = uvService.maxUV
-    val burnTimeMinutes: StateFlow<Map<Int, Int>> = uvService.burnTimeMinutes
-    val todaySunrise = uvService.todaySunrise
-    val todaySunset = uvService.todaySunset
-    val isOfflineMode = uvService.isOfflineMode
+    private val _location = MutableStateFlow<Location?>(null)
+    val location: StateFlow<Location?> = _location.asStateFlow()
+
+    private val _locationName = MutableStateFlow("")
+    val locationName: StateFlow<String> = _locationName.asStateFlow()
+
+    private val _currentUV = MutableStateFlow(0.0)
+    val currentUV: StateFlow<Double> = _currentUV.asStateFlow()
+
+    private val _maxUV = MutableStateFlow(0.0)
+    val maxUV: StateFlow<Double> = _maxUV.asStateFlow()
+
+    private val _burnTimeMinutes = MutableStateFlow<Map<Int, Int>>(emptyMap())
+    val burnTimeMinutes: StateFlow<Map<Int, Int>> = _burnTimeMinutes.asStateFlow()
+
+    private val _todaySunrise = MutableStateFlow<Long?>(null)
+    val todaySunrise: StateFlow<Long?> = _todaySunrise.asStateFlow()
+
+    private val _todaySunset = MutableStateFlow<Long?>(null)
+    val todaySunset: StateFlow<Long?> = _todaySunset.asStateFlow()
+
+    private val _isOfflineMode = MutableStateFlow(false)
+    val isOfflineMode: StateFlow<Boolean> = _isOfflineMode.asStateFlow()
 
     private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = combine(locationManager.error, uvService.error) { locationError, uvError ->
+    val error: StateFlow<String?> = combine(
+        locationManager.error,
+        uvService.error
+    ) { locationError, uvError ->
         locationError ?: uvError
-    }.asStateFlow(null)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = null
+    )
 
-    val isInSun = vitaminDCalculator.isInSun
-    val clothingLevel = vitaminDCalculator.clothingLevel
-    val skinType = vitaminDCalculator.skinType
-    val currentVitaminDRate = vitaminDCalculator.currentVitaminDRate
-    val sessionVitaminD = vitaminDCalculator.sessionVitaminD
+    val isInSun: StateFlow<Boolean> = vitaminDCalculator.isInSun
+    val clothingLevel: StateFlow<ClothingLevel> = vitaminDCalculator.clothingLevel
+    val skinType: StateFlow<SkinType> = vitaminDCalculator.skinType
+    val currentVitaminDRate: StateFlow<Double> = vitaminDCalculator.currentVitaminDRate
+    val sessionVitaminD: StateFlow<Double> = vitaminDCalculator.sessionVitaminD
+
+    init {
+        viewModelScope.launch {
+            migrationService.migrateDataIfNeeded()
+            networkMonitor.isOnline.collect { isOnline ->
+                if (isOnline) {
+                    updateUVData()
+                }
+            }
+            launch { locationManager.location.collect { _location.value = it } }
+            launch { locationManager.locationName.collect { _locationName.value = it } }
+            launch { uvService.currentUV.collect { _currentUV.value = it } }
+            launch { uvService.maxUV.collect { _maxUV.value = it } }
+            launch { uvService.burnTimeMinutes.collect { _burnTimeMinutes.value = it } }
+            launch {
+                uvService.todaySunrise.collect { date ->
+                    _todaySunrise.value = date?.time
+                }
+            }
+            launch {
+                uvService.todaySunset.collect { date ->
+                    _todaySunset.value = date?.time
+                }
+            }
+            launch { uvService.isOfflineMode.collect { _isOfflineMode.value = it } }
+        }
+    }
+
+    private fun updateUVData() {
+        viewModelScope.launch {
+            location.value?.let { loc ->
+                uvService.fetchUVData(loc)
+            }
+        }
+    }
+
+    fun updateClothingLevel(level: ClothingLevel) {
+        vitaminDCalculator.clothingLevel.value = level
+    }
+
+    fun updateSkinType(type: SkinType) {
+        vitaminDCalculator.skinType.value = type
+    }
 
     fun fetchLocation() {
         viewModelScope.launch {

@@ -13,4 +13,7 @@ interface CachedUVDataDao {
 
     @Query("SELECT * FROM cached_uv_data WHERE latitude BETWEEN :minLat AND :maxLat AND longitude BETWEEN :minLon AND :maxLon AND date >= :startDate AND date <= :endDate")
     suspend fun getCachedData(minLat: Double, maxLat: Double, minLon: Double, maxLon: Double, startDate: Date, endDate: Date): List<CachedUVData>
+
+    @Query("SELECT * FROM cached_uv_data ORDER BY lastUpdated DESC LIMIT 1")
+    suspend fun getLatestData(): CachedUVData?
 }

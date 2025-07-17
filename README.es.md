@@ -1,42 +1,56 @@
-# Sun Day
+# Sunday - Versión Android
 
-Seguimiento de rayos UV y calculadora de vitamina D para Android.
+Esta es la versión Android de [Sunday](https://github.com/jackjackbits/sunday), una aplicación para el seguimiento de la exposición UV y la generación de vitamina D.
 
-[📖 Lee la metodologia detallada](METHODOLOGY.md) | [🔒 Politica de Privacidad](PRIVACY.md)
+## Características
 
-<img height="500" alt="SunDay_1290x2796_v2" src="https://github.com/user-attachments/assets/b712cc98-1cc5-4e6f-8297-cabf8f801013" />
+- Seguimiento en tiempo real del índice UV
+- Cálculo personalizado de la producción de vitamina D basado en:
+  - Tipo de piel
+  - Nivel de ropa
+  - Índice UV actual
+  - Hora del día
+- Widget para la pantalla de inicio con información UV actual
+- Sincronización con Google Fit para el seguimiento de vitamina D
+- Modo sin conexión con datos en caché
+- Notificaciones para índices UV altos
+- Soporte para modo oscuro
+- Interfaz moderna con Material Design 3 y Jetpack Compose
 
-## Caracteristicas
+## Diferencias con la versión iOS
 
-- Indice UV en tiempo real de tu ubicacion
-- Calculo de vitamina D basado en los rayos UV, el tipo de piel y la ropa
-- Horas de salida y puesta del sol
-- Guarda en Google Fit
-- No se requieren claves de API
+Esta versión mantiene todas las funcionalidades clave de la versión iOS original, con algunas adaptaciones específicas para Android:
 
-## Requisitos
+- Uso de Google Fit en lugar de HealthKit
+- Widget implementado con Glance para Android
+- Interfaz adaptada a los estándares de Material Design
+- Sistema de permisos específico de Android
 
-- Android 8.0 (Oreo) o posterior (API nivel 26+)
-- Android Studio
+## Requisitos Técnicos
 
-## Configuracion
+- Android 8.0 (API 26) o superior
+- Google Play Services
+- Servicios de ubicación habilitados
+
+## Permisos
+
+La aplicación requiere los siguientes permisos:
+- Ubicación (para obtener datos UV precisos)
+- Google Fit (para el seguimiento de vitamina D)
+- Notificaciones (para alertas de UV alto)
+- Internet (para datos meteorológicos)
+
+## Instalación
 
 1. Clona el repositorio
 2. Abre el proyecto en Android Studio
-3. Deja que Android Studio sincronice el proyecto y descargue las dependencias necesarias.
-4. Compila y ejecuta la aplicacion en un emulador o un dispositivo fisico.
+3. Sincroniza con Gradle
+4. Ejecuta la aplicación
 
-## Uso
+## Créditos
 
-1. Permite los permisos de ubicacion y salud
-2. Pulsa el boton del sol para iniciar el seguimiento
-3. Selecciona tu nivel de ropa y tipo de piel
-4. La aplicacion calcula la ingesta de vitamina D automaticamente
-
-## APIs utilizadas
-
-- Open-Meteo para datos UV (gratis, sin clave)
+Basado en el proyecto original [Sunday](https://github.com/jackjackbits/sunday) para iOS por jackjackbits.
 
 ## Licencia
 
-Dominio publico. Usalo como quieras.
+[Licencia MIT](LICENSE)

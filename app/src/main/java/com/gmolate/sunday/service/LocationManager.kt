@@ -50,13 +50,11 @@ class LocationManager(private val context: Context) {
     private suspend fun fetchLocationName(location: Location) {
         try {
             val addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1)
-            val address = addresses?.firstOrNull()
-            if (address != null) {
-                val name = address.subLocality ?: address.locality ?: address.adminArea ?: ""
-                _locationName.value = name
-            }
+            _locationName.value = addresses?.firstOrNull()?.locality ?: "Unknown Location"
+            _error.value = null
         } catch (e: Exception) {
-            // Do not surface this error to the user
+            _error.value = "Could not get location name: ${e.message}"
+            _locationName.value = "Unknown Location"
         }
     }
 }
