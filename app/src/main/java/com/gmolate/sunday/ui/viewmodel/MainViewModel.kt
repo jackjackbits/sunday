@@ -18,8 +18,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val healthManager = HealthManager(application)
     private val networkMonitor = NetworkMonitor(application)
     private val migrationService = MigrationService(application)
-    private val uvService = UVService(db)
+    private val notificationService = NotificationService(application)
+    private val uvService = UVService(db, notificationService)
     private val vitaminDCalculator = VitaminDCalculator(healthManager)
+    private val moonPhaseService = MoonPhaseService(application, db)
+    private val solarNoonService = SolarNoonNotificationService(application)
 
     private val _location = MutableStateFlow<Location?>(null)
     val location: StateFlow<Location?> = _location.asStateFlow()
@@ -45,6 +48,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isOfflineMode = MutableStateFlow(false)
     val isOfflineMode: StateFlow<Boolean> = _isOfflineMode.asStateFlow()
 
+    // Estados para fases lunares
+    val currentMoonPhase: StateFlow<String> = moonPhaseService.currentMoonPhase
+    val currentMoonIcon: StateFlow<String> = moonPhaseService.currentMoonIcon
+    val moonAge: StateFlow<Double> = moonPhaseService.moonAge
+    val moonFraction: StateFlow<Double> = moonPhaseService.moonFraction
+
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = combine(
         locationManager.error,
@@ -66,13 +75,35 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     init {
         viewModelScope.launch {
             migrationService.migrateDataIfNeeded()
-            networkMonitor.isOnline.collect { isOnline ->
-                if (isOnline) {
-                    updateUVData()
+            // Cargar fases lunares al inicio
+            moonPhaseService.fetchMoonPhase()
+            
+            // Usar un solo Job para todas las colecciones para mejor manejo de memoria
+            launch {
+                networkMonitor.isOnline.collect { isOnline ->
+                    if (isOnline) {
+                        updateUVData()
+                        // Actualizar fases lunares cuando hay conexión
+                        moonPhaseService.fetchMoonPhase()
+                    }
                 }
             }
-            launch { locationManager.location.collect { _location.value = it } }
+            
+            // Agrupar las colecciones relacionadas para optimizar recursos
+            launch { 
+                locationManager.location.collect { 
+                    _location.value = it
+                    // Programar notificaciones cuando se obtiene ubicación nueva
+                    it?.let { loc ->
+                        if (solarNoonService.isSolarNoonNotificationEnabled()) {
+                            solarNoonService.scheduleSolarNoonNotification(loc)
+                        }
+                    }
+                } 
+            }
             launch { locationManager.locationName.collect { _locationName.value = it } }
+            
+            // Colecciones de UV
             launch { uvService.currentUV.collect { _currentUV.value = it } }
             launch { uvService.maxUV.collect { _maxUV.value = it } }
             launch { uvService.burnTimeMinutes.collect { _burnTimeMinutes.value = it } }
@@ -142,5 +173,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             vitaminDCalculator.updateUV(currentUV.value)
         }
+    }
+
+    fun enableSolarNoonNotifications(enabled: Boolean) {
+        solarNoonService.setSolarNoonNotificationEnabled(enabled)
+        if (enabled) {
+            location.value?.let { loc ->
+                solarNoonService.scheduleSolarNoonNotification(loc)
+            }
+        }
+    }
+
+    fun isSolarNoonNotificationEnabled(): Boolean {
+        return solarNoonService.isSolarNoonNotificationEnabled()
     }
 }

@@ -6,13 +6,14 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
-@Database(entities = [UserPreferences::class, VitaminDSession::class, CachedUVData::class], version = 2, exportSchema = false)
+@Database(entities = [UserPreferences::class, VitaminDSession::class, CachedUVData::class, CachedMoonData::class], version = 4, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun userPreferencesDao(): UserPreferencesDao
     abstract fun vitaminDSessionDao(): VitaminDSessionDao
     abstract fun cachedUVDataDao(): CachedUVDataDao
+    abstract fun cachedMoonDataDao(): CachedMoonDataDao
 
     companion object {
         @Volatile
@@ -25,7 +26,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "sunday_database"
                 )
-                .addMigrations(MigrationService.MIGRATION_1_2)
+                .addMigrations(MigrationService.MIGRATION_1_2, MigrationService.MIGRATION_2_3, MigrationService.MIGRATION_3_4)
                 .fallbackToDestructiveMigration()
                 .build()
                 INSTANCE = instance

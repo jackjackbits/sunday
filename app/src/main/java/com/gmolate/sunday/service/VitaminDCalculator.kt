@@ -80,7 +80,19 @@ class VitaminDCalculator(private val healthManager: HealthManager) {
         if (!_isInSun.value) return
 
         val rate = calculateVitaminDRate(uvIndex)
-        _sessionVitaminD.value += rate / 3600.0 // Convertir tasa por hora a tasa por segundo
+        val increment = rate / 3600.0 // Convertir tasa por hora a tasa por segundo
+        
+        // Aplicar límite diario máximo de forma gradual
+        val currentTotal = _sessionVitaminD.value + increment
+        val dailyLimit = dailyVitaminDGoal * 2.0 // Máximo 2x el objetivo diario
+        
+        if (currentTotal <= dailyLimit) {
+            _sessionVitaminD.value = currentTotal
+        } else {
+            // Reducir la tasa cuando nos acercamos al límite
+            val remainingCapacity = (dailyLimit - _sessionVitaminD.value).coerceAtLeast(0.0)
+            _sessionVitaminD.value += (increment * 0.1).coerceAtMost(remainingCapacity)
+        }
 
         // Si alcanzamos el objetivo diario, notificar
         if (_sessionVitaminD.value >= dailyVitaminDGoal) {
@@ -94,7 +106,8 @@ class VitaminDCalculator(private val healthManager: HealthManager) {
     }
 
     private fun calculateVitaminDRate(uvIndex: Double): Double {
-        if (uvIndex <= 0) return 0.0
+        // Validar entrada
+        if (uvIndex <= 0 || uvIndex.isNaN() || uvIndex.isInfinite()) return 0.0
 
         // Factor base por tipo de piel
         val skinFactor = _skinType.value.vitaminDFactor
@@ -108,11 +121,14 @@ class VitaminDCalculator(private val healthManager: HealthManager) {
         // Factor por adaptación (basado en exposición previa)
         val adaptationFactor = calculateAdaptationFactor()
 
-        // Fórmula mejorada para el cálculo de vitamina D
-        val normalizedUV = uvIndex / uvHalfMax
+        // Fórmula mejorada para el cálculo de vitamina D con límites más realistas
+        val normalizedUV = (uvIndex / uvHalfMax).coerceIn(0.0, 3.0) // Limitar valores extremos
         val baseRate = 1000.0 * (1.0 - exp(-normalizedUV * uvMaxFactor))
 
-        return max(0.0, baseRate * skinFactor * clothingFactor * timeQualityFactor * adaptationFactor)
+        val calculatedRate = baseRate * skinFactor * clothingFactor * timeQualityFactor * adaptationFactor
+        
+        // Aplicar límites realistas
+        return calculatedRate.coerceIn(0.0, 5000.0) // Máximo 5000 UI/hora
     }
 
     private fun calculateTimeQualityFactor(): Double {

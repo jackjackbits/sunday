@@ -29,6 +29,12 @@ interface UserPreferencesDao {
     @Query("UPDATE user_preferences SET enableNotifications = :enable, updatedAt = :updatedAt WHERE id = :id")
     suspend fun updateNotifications(id: Int, enable: Boolean, updatedAt: Date = Date())
 
+    @Query("UPDATE user_preferences SET enableSolarNoonNotifications = :enable, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun updateSolarNoonNotifications(id: Int, enable: Boolean, updatedAt: Date = Date())
+
+    @Query("UPDATE user_preferences SET solarNoonNotificationMinutesBefore = :minutes, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun updateSolarNoonTiming(id: Int, minutes: Int, updatedAt: Date = Date())
+
     @Query("UPDATE user_preferences SET darkMode = :darkMode, updatedAt = :updatedAt WHERE id = :id")
     suspend fun updateDarkMode(id: Int, darkMode: Boolean, updatedAt: Date = Date())
 

@@ -8,46 +8,55 @@
     android:focusable="true"
     android:background="@drawable/widget_background">
 
+    <!-- Contenido principal (UV o Luna) -->
     <TextView
         android:id="@+id/current_uv"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        android:textSize="24sp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="8dp"
+        android:textSize="32sp"
         android:textColor="#FFFFFF"
         android:textStyle="bold"/>
 
     <TextView
+        android:id="@+id/widget_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/current_uv"
         android:layout_centerHorizontal="true"
         android:text="UV Index"
-        android:textColor="#FFFFFF"/>
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"/>
+
+    <!-- Información adicional -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <TextView
+            android:id="@+id/sunrise_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🌅 --:--"
+            android:textColor="#FFFFFF"
+            android:textSize="10sp"
+            android:layout_marginEnd="16dp"/>
+
+        <TextView
+            android:id="@+id/sunset_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🌇 --:--"
+            android:textColor="#FFFFFF"
+            android:textSize="10sp"/>
+
+    </LinearLayout>
 
 </RelativeLayout>
-
-import android.appwidget.AppWidgetManager
-import android.appwidget.AppWidgetProvider
-import android.content.Context
-import android.widget.RemoteViews
-import com.gmolate.sunday.R
-import com.gmolate.sunday.model.AppDatabase
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-
-class SundayWidget : AppWidgetProvider() {
-    override fun onUpdate(
-        context: Context,
-        appWidgetManager: AppWidgetManager,
-        appWidgetIds: IntArray
-    ) {
-        CoroutineScope(Dispatchers.IO).launch {
-            val db = AppDatabase.getDatabase(context)
-            val cachedData = db.cachedUVDataDao().getLatestData()
-
-            appWidgetIds.forEach { appWidgetId ->
                 val views = RemoteViews(context.packageName, R.layout.widget_sunday)
 
                 cachedData?.let {

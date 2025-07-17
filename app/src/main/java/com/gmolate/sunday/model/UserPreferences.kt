@@ -15,6 +15,8 @@ data class UserPreferences(
     val userAge: Int = 30,
     val dailyVitaminDGoal: Int = 2000, // UI por día (valor recomendado típico)
     val enableNotifications: Boolean = true,
+    val enableSolarNoonNotifications: Boolean = true, // Nueva preferencia
+    val solarNoonNotificationMinutesBefore: Int = 30, // Minutos antes del mediodía solar
     val enableHighUVAlerts: Boolean = true,
     val darkMode: Boolean = false,
     val useMetricSystem: Boolean = true,

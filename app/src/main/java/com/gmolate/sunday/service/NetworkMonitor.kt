@@ -34,6 +34,9 @@ enum class ConnectionType {
 class NetworkMonitor(private val context: Context) {
     private val _isConnected = MutableStateFlow(true)
     val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
+    
+    private val _isOnline = MutableStateFlow(true)
+    val isOnline: StateFlow<Boolean> = _isOnline.asStateFlow()
 
     private val _connectionType = MutableStateFlow<ConnectionType>(ConnectionType.NONE)
     val connectionType: StateFlow<ConnectionType> = _connectionType.asStateFlow()

@@ -26,16 +26,42 @@ class MigrationService(private val context: Context) {
                 database.execSQL("ALTER TABLE user_preferences ADD COLUMN lastLocationLon REAL")
             }
         }
+
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Crear tabla para datos de luna cachados
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS cached_moon_data (
+                        date TEXT PRIMARY KEY NOT NULL,
+                        phaseName TEXT NOT NULL,
+                        phaseIcon TEXT NOT NULL,
+                        age REAL NOT NULL,
+                        fraction REAL NOT NULL,
+                        lastUpdated INTEGER NOT NULL
+                    )
+                """.trimIndent())
+            }
+        }
+
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Agregar nuevas columnas para notificaciones de mediodía solar
+                database.execSQL("ALTER TABLE user_preferences ADD COLUMN enableSolarNoonNotifications INTEGER NOT NULL DEFAULT 1")
+                database.execSQL("ALTER TABLE user_preferences ADD COLUMN solarNoonNotificationMinutesBefore INTEGER NOT NULL DEFAULT 30")
+            }
+        }
     }
 
     suspend fun migrateDataIfNeeded() = withContext(Dispatchers.IO) {
         val currentVersion = prefs.getInt("data_version", 0)
-        val targetVersion = 2 // Incrementar cuando se agreguen nuevas migraciones
+        val targetVersion = 4 // Incrementar cuando se agreguen nuevas migraciones
 
         if (currentVersion < targetVersion) {
             when (currentVersion) {
                 0 -> migrateToVersion1()
                 1 -> migrateToVersion2()
+                2 -> migrateToVersion3()
+                3 -> migrateToVersion4()
             }
             prefs.edit().putInt("data_version", targetVersion).apply()
         }
@@ -62,5 +88,15 @@ class MigrationService(private val context: Context) {
                 useMetricSystem = true
             ))
         }
+    }
+
+    private suspend fun migrateToVersion3() {
+        // Migración para la versión 3 que incluye datos de luna
+        // No hay datos que migrar ya que es una tabla nueva
+    }
+
+    private suspend fun migrateToVersion4() {
+        // Migración para la versión 4 que incluye notificaciones de mediodía solar
+        // Los valores por defecto ya están establecidos en la migración SQL
     }
 }
