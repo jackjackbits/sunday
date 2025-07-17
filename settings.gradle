@@ -6,30 +6,14 @@ pluginManagement {
     }
 }
 
-@Suppress('UnstableApiUsage')
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
         mavenCentral()
-        maven { url 'https://jitpack.io' }
-    }
-    versionCatalogs {
-        libs {
-            version('kotlin', '1.9.10')
-            version('compose-compiler', '1.5.3')
-            version('room', '2.6.0')
-        }
+        maven { url = uri("https://jitpack.io") }
     }
 }
 
-rootProject.name = 'Sunday'
-include ':app'
-
-gradle.beforeProject {
-    project -> project.extensions.findByName("android")?.apply {
-        composeOptions {
-            kotlinCompilerExtensionVersion = '1.5.3'
-        }
-    }
-}
+rootProject.name = "sunday-Android"
+include(":app")
