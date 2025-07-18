@@ -13,11 +13,11 @@ private let sharedNumberFormatter: NumberFormatter = {
 
 struct Provider: IntentTimelineProvider {
     func placeholder(in context: Context) -> SimpleEntry {
-        SimpleEntry(date: Date(), uvIndex: 5.0, todaysTotal: 2500, isTracking: false, vitaminDRate: 350, locationName: "Rome", moonPhaseName: "Full Moon", altitude: 100, uvMultiplier: 1.01, cloudCover: 20.0, configuration: ConfigurationIntent())
+        SimpleEntry(date: Date(), uvIndex: 5.0, todaysTotal: 2500, todaysDaylight: 120, isTracking: false, vitaminDRate: 350, locationName: "Rome", moonPhaseName: "Full Moon", altitude: 100, uvMultiplier: 1.01, cloudCover: 20.0, configuration: ConfigurationIntent())
     }
 
     func getSnapshot(for configuration: ConfigurationIntent, in context: Context, completion: @escaping (SimpleEntry) -> ()) {
-        let entry = SimpleEntry(date: Date(), uvIndex: 5.0, todaysTotal: 2500, isTracking: false, vitaminDRate: 350, locationName: "Rome", moonPhaseName: "Full Moon", altitude: 100, uvMultiplier: 1.01, cloudCover: 20.0, configuration: configuration)
+        let entry = SimpleEntry(date: Date(), uvIndex: 5.0, todaysTotal: 2500, todaysDaylight: 120, isTracking: false, vitaminDRate: 350, locationName: "Rome", moonPhaseName: "Full Moon", altitude: 100, uvMultiplier: 1.01, cloudCover: 20.0, configuration: configuration)
         completion(entry)
     }
 
@@ -28,6 +28,7 @@ struct Provider: IntentTimelineProvider {
         let sharedDefaults = UserDefaults(suiteName: "group.sunday.widget")
         let uvIndex = sharedDefaults?.double(forKey: "currentUV") ?? 0.0
         let todaysTotal = sharedDefaults?.double(forKey: "todaysTotal") ?? 0.0
+        let todaysDaylight = sharedDefaults?.double(forKey: "todaysDaylight") ?? 0.0
         let isTracking = sharedDefaults?.bool(forKey: "isTracking") ?? false
         let vitaminDRate = sharedDefaults?.double(forKey: "vitaminDRate") ?? 0.0
         let locationName = sharedDefaults?.string(forKey: "locationName") ?? ""
@@ -66,7 +67,7 @@ struct Provider: IntentTimelineProvider {
         
         // Create entries
         for entryDate in entryDates {
-            let entry = SimpleEntry(date: entryDate, uvIndex: uvIndex, todaysTotal: todaysTotal, isTracking: isTracking, vitaminDRate: vitaminDRate, locationName: locationName, moonPhaseName: moonPhaseName, altitude: altitude, uvMultiplier: uvMultiplier, cloudCover: cloudCover, configuration: configuration)
+            let entry = SimpleEntry(date: entryDate, uvIndex: uvIndex, todaysTotal: todaysTotal, todaysDaylight: todaysDaylight, isTracking: isTracking, vitaminDRate: vitaminDRate, locationName: locationName, moonPhaseName: moonPhaseName, altitude: altitude, uvMultiplier: uvMultiplier, cloudCover: cloudCover, configuration: configuration)
             entries.append(entry)
         }
 
@@ -79,6 +80,7 @@ struct SimpleEntry: TimelineEntry {
     let date: Date
     let uvIndex: Double
     let todaysTotal: Double
+    let todaysDaylight: Double
     let isTracking: Bool
     let vitaminDRate: Double
     let locationName: String
@@ -127,12 +129,24 @@ struct SmallWidgetView: View {
                     Text("TODAY")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(.white.opacity(0.7))
-                    Text(formatNumber(entry.todaysTotal))
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                    Text("IU")
-                        .font(.system(size: 10))
-                        .foregroundColor(.white.opacity(0.7))
+                    HStack(spacing: 15) {
+                        VStack(spacing: 0) {
+                            Text(formatNumber(entry.todaysTotal))
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                            Text("IU")
+                                .font(.system(size: 10))
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                        VStack(spacing: 0) {
+                            Text(formatDaylightDuration(entry.todaysDaylight))
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                            Text("Daylight")
+                                .font(.system(size: 10))
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                    }
                 }
                 
                 // Tracking indicator
@@ -201,6 +215,23 @@ struct SmallWidgetView: View {
             return String(format: "%.0fK", value / 1000)
         }
     }
+    
+    func formatDaylightDuration(_ interval: TimeInterval) -> String {
+        let totalSeconds = Int(interval)
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let seconds = totalSeconds % 60
+
+        if hours > 0 && minutes > 0 {
+            return "\(hours)h \(minutes)m"
+        } else if hours > 0 {
+            return "\(hours)h"
+        } else if minutes > 0 {
+            return "\(minutes)m"
+        } else {
+            return "\(seconds)s"
+        }
+    }
 }
 
 struct MediumWidgetView: View {
@@ -230,13 +261,23 @@ struct MediumWidgetView: View {
                                 Text("TODAY")
                                     .font(.system(size: 10, weight: .medium))
                                     .foregroundColor(.white.opacity(0.7))
-                                HStack(spacing: 2) {
-                                    Text(formatNumber(entry.todaysTotal))
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .foregroundColor(.white)
-                                    Text("IU")
-                                        .font(.system(size: 11))
-                                        .foregroundColor(.white.opacity(0.8))
+                                HStack(spacing: 15) {
+                                    VStack(spacing: 0) {
+                                        Text(formatNumber(entry.todaysTotal))
+                                            .font(.system(size: 18, weight: .semibold))
+                                            .foregroundColor(.white)
+                                        Text("IU")
+                                            .font(.system(size: 11))
+                                            .foregroundColor(.white.opacity(0.8))
+                                    }
+                                    VStack(spacing: 0) {
+                                        Text(formatDaylightDuration(entry.todaysDaylight))
+                                            .font(.system(size: 18, weight: .semibold))
+                                            .foregroundColor(.white)
+                                        Text("Daylight")
+                                            .font(.system(size: 11))
+                                            .foregroundColor(.white.opacity(0.8))
+                                    }
                                 }
                             }
                             
@@ -382,6 +423,23 @@ struct MediumWidgetView: View {
             return String(format: "%.0fK", value / 1000)
         }
     }
+    
+    func formatDaylightDuration(_ interval: TimeInterval) -> String {
+        let totalSeconds = Int(interval)
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let seconds = totalSeconds % 60
+
+        if hours > 0 && minutes > 0 {
+            return "\(hours)h \(minutes)m"
+        } else if hours > 0 {
+            return "\(hours)h"
+        } else if minutes > 0 {
+            return "\(minutes)m"
+        } else {
+            return "\(seconds)s"
+        }
+    }
 }
 
 extension Color {
@@ -471,7 +529,7 @@ struct SundayWidget: Widget {
 
 struct SundayWidget_Previews: PreviewProvider {
     static var previews: some View {
-        SundayWidgetEntryView(entry: SimpleEntry(date: Date(), uvIndex: 5.0, todaysTotal: 2500, isTracking: false, vitaminDRate: 350, locationName: "Rome", moonPhaseName: "Full Moon", altitude: 100, uvMultiplier: 1.01, cloudCover: 20.0, configuration: ConfigurationIntent()))
+        SundayWidgetEntryView(entry: SimpleEntry(date: Date(), uvIndex: 5.0, todaysTotal: 2500, todaysDaylight: 120, isTracking: false, vitaminDRate: 350, locationName: "Rome", moonPhaseName: "Full Moon", altitude: 100, uvMultiplier: 1.01, cloudCover: 20.0, configuration: ConfigurationIntent()))
             .previewContext(WidgetPreviewContext(family: .systemSmall))
     }
 }

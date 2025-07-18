@@ -64,6 +64,14 @@ enum SkinType: Int, CaseIterable {
     }
 }
 
+extension VitaminDCalculator {
+    var elapsedTime: TimeInterval {
+        guard let start = sessionStartTime else { return 0 }
+        return Date().timeIntervalSince(start)
+    }
+}
+
+
 class VitaminDCalculator: ObservableObject {
     @Published var isInSun = false
     @Published var clothingLevel: ClothingLevel = .light {
@@ -199,7 +207,7 @@ class VitaminDCalculator: ObservableObject {
         }
     }
     
-    func startSession(uvIndex: Double) {
+    @MainActor func startSession(uvIndex: Double) {
         guard isInSun else { return }
         
         sessionStartTime = Date()
@@ -218,9 +226,15 @@ class VitaminDCalculator: ObservableObject {
         }
         
         updateVitaminDRate(uvIndex: uvIndex)
+        LiveActivityManager.shared.startActivity(startDate: sessionStartTime ?? Date())
     }
     
-    func stopSession() {
+    @MainActor func stopSession() {
+        // Store daylight in healthkit
+        if (sessionStartTime != nil) {
+            healthManager?.saveDaylightTime(seconds: elapsedTime, start: sessionStartTime!, end: Date())
+        }
+        
         timer?.invalidate()
         timer = nil
         sessionStartTime = nil
@@ -231,6 +245,8 @@ class VitaminDCalculator: ObservableObject {
         
         // Update widget data
         updateWidgetData()
+        
+        LiveActivityManager.shared.stopActivity()
     }
     
     func updateUV(_ uvIndex: Double) {
@@ -284,7 +300,7 @@ class VitaminDCalculator: ObservableObject {
         updateWidgetData()
     }
     
-    private func updateVitaminD(uvIndex: Double) {
+    @MainActor private func updateVitaminD(uvIndex: Double) {
         guard isInSun else { return }
         
         // Always recalculate rate with current UV to ensure accuracy
@@ -292,7 +308,8 @@ class VitaminDCalculator: ObservableObject {
         
         // Calculate actual time elapsed since last update (should be ~1 second)
         let now = Date()
-        let elapsed = lastUpdateTime.map { now.timeIntervalSince($0) } ?? 1.0
+//        let elapsed = lastUpdateTime.map { now.timeIntervalSince($0) } ?? 1.0
+        let elapsed = elapsedTime
         lastUpdateTime = now
         
         // Add vitamin D based on actual elapsed time
@@ -300,9 +317,10 @@ class VitaminDCalculator: ObservableObject {
         
         // Update widget data
         updateWidgetData()
+        LiveActivityManager.shared.updateActivity(elapsedTime: elapsed, isPaused: false)
     }
     
-    func toggleSunExposure(uvIndex: Double) {
+    @MainActor func toggleSunExposure(uvIndex: Double) {
         isInSun.toggle()
         
         if isInSun {

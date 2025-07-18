@@ -7,6 +7,7 @@ class HealthManager: ObservableObject {
     
     private let healthStore = HKHealthStore()
     private let vitaminDType = HKQuantityType.quantityType(forIdentifier: .dietaryVitaminD)!
+    private let timeInDaylightType = HKQuantityType.quantityType(forIdentifier: .timeInDaylight)!
     private let fitzpatrickSkinType = HKObjectType.characteristicType(forIdentifier: .fitzpatrickSkinType)!
     private let dateOfBirthType = HKObjectType.characteristicType(forIdentifier: .dateOfBirth)!
     
@@ -20,8 +21,8 @@ class HealthManager: ObservableObject {
             return
         }
         
-        let typesToWrite: Set<HKSampleType> = [vitaminDType]
-        let typesToRead: Set<HKObjectType> = [vitaminDType, fitzpatrickSkinType, dateOfBirthType]
+        let typesToWrite: Set<HKSampleType> = [vitaminDType, timeInDaylightType]
+        let typesToRead: Set<HKObjectType> = [vitaminDType, timeInDaylightType, fitzpatrickSkinType, dateOfBirthType]
         
         healthStore.requestAuthorization(toShare: typesToWrite, read: typesToRead) { [weak self] success, error in
             DispatchQueue.main.async {
@@ -67,6 +68,37 @@ class HealthManager: ObservableObject {
         }
     }
     
+    func saveDaylightTime(seconds: Double, start: Date, end: Date) {
+        guard isAuthorized else {
+            requestAuthorization()
+            return
+        }
+
+        let quantity = HKQuantity(unit: .second(), doubleValue: seconds)
+        let sample = HKQuantitySample(
+            type: timeInDaylightType,
+            quantity: quantity,
+            start: start,
+            end: end,
+            metadata: [
+                HKMetadataKeyWasUserEntered: false,
+                "Source": "Sun Day App",
+                "Duration": seconds
+            ]
+        )
+
+        healthStore.save(sample) { [weak self] success, error in
+            DispatchQueue.main.async {
+                if success {
+                    print("✅ Saved time in daylight: \(seconds) seconds")
+                } else if let error = error {
+                    self?.lastError = error.localizedDescription
+                    print("❌ Error saving daylight time: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
     func getTodaysVitaminD(completion: @escaping (Double?) -> Void) {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: Date())
@@ -95,6 +127,40 @@ class HealthManager: ObservableObject {
             }
         }
         
+        healthStore.execute(query)
+    }
+    
+    func getTodaysDaylight(completion: @escaping (Double?) -> Void) {
+        guard let timeInDaylightType = HKObjectType.quantityType(forIdentifier: .timeInDaylight) else {
+            completion(nil)
+            return
+        }
+        
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: Date())
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+
+        let predicate = HKQuery.predicateForSamples(
+            withStart: startOfDay,
+            end: endOfDay,
+            options: .strictStartDate
+        )
+
+        let query = HKStatisticsQuery(
+            quantityType: timeInDaylightType,
+            quantitySamplePredicate: predicate,
+            options: .cumulativeSum
+        ) { _, result, error in
+            DispatchQueue.main.async {
+                if let sum = result?.sumQuantity() {
+                    let seconds = sum.doubleValue(for: .second())
+                    completion(seconds)
+                } else {
+                    completion(nil)
+                }
+            }
+        }
+
         healthStore.execute(query)
     }
     
