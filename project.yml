@@ -61,6 +61,7 @@ targets:
             - group.sunday.widget
     dependencies:
       - target: SundayWidget
+      - target: SundayLiveActivity
   
   SundayWidget:
     type: app-extension
@@ -87,3 +88,31 @@ targets:
           enabled: true
           groups:
             - group.sunday.widget
+
+  SundayLiveActivity:
+    type: app-extension
+    platform: iOS
+    sources:
+      - SundayLiveActivity
+    resources:
+      - SundayLiveActivity/Assets.xcassets
+    info:
+      path: SundayLiveActivity/Info.plist
+      properties:
+        CFBundleDisplayName: Sun Day Activity
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.dynamic-island-content
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).LiveActivity
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: it.sunday.app.liveactivity
+        INFOPLIST_FILE: SundayLiveActivity/Info.plist
+        SKIP_INSTALL: true
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_ENTITLEMENTS: SundayLiveActivity/SundayLiveActivity.entitlements
+    capabilities:
+      - com.apple.ApplicationGroups:
+          enabled: true
+          groups:
+            - group.sunday.widget
+
