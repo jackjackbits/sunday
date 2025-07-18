@@ -41,6 +41,8 @@
 	<string>Sun Day needs your location to track UV exposure throughout the day</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Sun Day needs your location to determine UV levels at your current position</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>NSUserNotificationCenterUsageDescription</key>
 	<string>Sun Day sends reminders for sunrise, sunset, and solar noon to help you track vitamin D</string>
 	<key>UILaunchStoryboardName</key>

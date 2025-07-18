@@ -17,6 +17,7 @@ struct ContentView: View {
     @State private var showClothingPicker = false
     @State private var showSkinTypePicker = false
     @State private var todaysTotal: Double = 0
+    @State private var todaysDaylight: Double = 0
     @State private var currentGradientColors: [Color] = []
     @State private var showInfoSheet = false
     @State private var showManualExposureSheet = false
@@ -134,6 +135,7 @@ struct ContentView: View {
                 timerCancellable = timer.autoconnect().sink { _ in
                     updateData()
                     loadTodaysTotal()
+                    loadTodaysDaylight()
                     // Only update gradient if colors actually changed
                     let newColors = gradientColors
                     if newColors != currentGradientColors {
@@ -143,6 +145,7 @@ struct ContentView: View {
                 // Also update data immediately when returning to foreground
                 updateData()
                 loadTodaysTotal()
+                loadTodaysDaylight()
                 // Update gradient immediately when returning to foreground
                 let newColors = gradientColors
                 if newColors != currentGradientColors {
@@ -531,7 +534,7 @@ struct ContentView: View {
                     .frame(height: 12)
                     
                     Text(formatVitaminDNumber(vitaminDCalculator.currentVitaminDRate / 60.0))
-                        .font(.system(size: 26, weight: .bold))
+                        .font(.system(size: 22, weight: .bold))
                         .foregroundColor(.white)
                         .monospacedDigit()
                         .frame(minWidth: 80)
@@ -553,7 +556,7 @@ struct ContentView: View {
                     
                     HStack(spacing: 4) {
                         Text(formatVitaminDNumber(vitaminDCalculator.sessionVitaminD))
-                            .font(.system(size: 26, weight: .bold))
+                            .font(.system(size: 22, weight: .bold))
                             .foregroundColor(.white)
                             .monospacedDigit()
                             .frame(minWidth: 80, alignment: .trailing)
@@ -588,17 +591,35 @@ struct ContentView: View {
                         .tracking(1.2)
                         .frame(height: 12)
                     
-                    Text(formatTodaysTotal(todaysTotal + vitaminDCalculator.sessionVitaminD))
-                        .font(.system(size: 26, weight: .bold))
-                        .foregroundColor(.white)
-                        .monospacedDigit()
-                        .frame(minWidth: 80)
-                        .frame(height: 34)
-                    
-                    Text("IU total")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.6))
-                        .frame(height: 16)
+                    HStack(spacing: 4) {
+                        VStack(spacing: 8) {
+                            Text(formatTodaysTotal(todaysTotal + vitaminDCalculator.sessionVitaminD))
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundColor(.white)
+                                .monospacedDigit()
+                                .frame(minWidth: 80)
+                                .frame(height: 34)
+                            
+                            Text("IU total")
+                                .font(.system(size: 12))
+                                .foregroundColor(.white.opacity(0.6))
+                                .frame(height: 16)
+                        }
+                        
+                        VStack(spacing: 8) {
+                            Text(formatTodaysDaylight(todaysDaylight + vitaminDCalculator.elapsedTime))
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundColor(.white)
+                                .monospacedDigit()
+                                .frame(minWidth: 80)
+                                .frame(height: 34)
+                            
+                            Text("Daylight")
+                                .font(.system(size: 12))
+                                .foregroundColor(.white.opacity(0.6))
+                                .frame(height: 16)
+                        }
+                    }
                 }
                 .frame(minWidth: 100)
             }
@@ -625,6 +646,7 @@ struct ContentView: View {
         locationManager.requestPermission()
         healthManager.requestAuthorization()
         loadTodaysTotal()
+        loadTodaysDaylight()
         currentGradientColors = gradientColors
         
         // Connect services - MUST set modelContext before any UV data fetching
@@ -673,13 +695,16 @@ struct ContentView: View {
         if !vitaminDCalculator.isInSun && vitaminDCalculator.sessionVitaminD > 0 {
             let sessionAmount = vitaminDCalculator.sessionVitaminD
             healthManager.saveVitaminD(amount: sessionAmount)
+            
             // Add the session amount to today's total immediately
             todaysTotal += sessionAmount
+            todaysDaylight += vitaminDCalculator.elapsedTime
             // Reset the session vitamin D after saving
             vitaminDCalculator.sessionVitaminD = 0.0
             // Then reload from HealthKit to ensure accuracy
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 loadTodaysTotal()
+                loadTodaysDaylight()
             }
         }
     }
@@ -687,6 +712,12 @@ struct ContentView: View {
     private func loadTodaysTotal() {
         healthManager.getTodaysVitaminD { total in
             todaysTotal = total ?? 0
+        }
+    }
+    
+    private func loadTodaysDaylight() {
+        healthManager.getTodaysDaylight { total in
+            todaysDaylight = total ?? 0
         }
     }
     
@@ -730,6 +761,21 @@ struct ContentView: View {
             return formatter.string(from: NSNumber(value: value)) ?? "\(Int(value))"
         } else {
             return String(format: "%.0fK", value / 1000)
+        }
+    }
+    
+    func formatTodaysDaylight(_ seconds: TimeInterval) -> String {
+        let totalMinutes = Int(seconds / 60)
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+
+        switch (hours, minutes) {
+        case (0, let m):
+            return "\(m)m"
+        case (let h, 0):
+            return "\(h)h"
+        default:
+            return "\(hours)h \(minutes)m"
         }
     }
     
