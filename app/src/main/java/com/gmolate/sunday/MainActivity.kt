@@ -96,7 +96,10 @@ class MainActivity : ComponentActivity() {
             // Aplica el tema de la aplicacion.
             SundayTheme {
                 // Contenedor de superficie que utiliza el color de fondo del tema.
-                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
                     // Muestra la vista principal de la aplicacion.
                     ContentView(mainViewModel)
                 }

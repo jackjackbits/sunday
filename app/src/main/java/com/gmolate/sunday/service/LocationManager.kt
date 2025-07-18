@@ -50,11 +50,37 @@ class LocationManager(private val context: Context) {
     private suspend fun fetchLocationName(location: Location) {
         try {
             val addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1)
-            _locationName.value = addresses?.firstOrNull()?.locality ?: "Unknown Location"
-            _error.value = null
+            if (!addresses.isNullOrEmpty()) {
+                val address = addresses[0]
+                val locationName = when {
+                    !address.locality.isNullOrEmpty() -> address.locality
+                    !address.subAdminArea.isNullOrEmpty() -> address.subAdminArea
+                    !address.adminArea.isNullOrEmpty() -> address.adminArea
+                    !address.countryName.isNullOrEmpty() -> address.countryName
+                    else -> "Ubicación desconocida"
+                }
+                _locationName.value = locationName
+            } else {
+                _locationName.value = "Ubicación desconocida"
+            }
         } catch (e: Exception) {
-            _error.value = "Could not get location name: ${e.message}"
-            _locationName.value = "Unknown Location"
+            _locationName.value = "Ubicación desconocida"
+        }
+    }
+
+    fun requestLocation() {
+        // Iniciar solicitud de ubicación de forma asíncrona
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            fetchLocation()
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun getLastKnownLocation(): Location? {
+        return try {
+            fusedLocationClient.lastLocation.result
+        } catch (e: Exception) {
+            null
         }
     }
 }

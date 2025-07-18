@@ -31,27 +31,35 @@ enum class SkinType(
         "Rara vez se quema, bronceado fácil. Ojos marrones, pelo castaño oscuro"
     ),
     TYPE_5(
-        "Tipo V - Media oscura",
-        0.8,
-        850,
-        "Muy rara vez se quema, bronceado muy fácil. Ojos y pelo oscuros"
+        "Tipo V - Oscura",
+        0.7,
+        900,
+        "Muy rara vez se quema, bronceado profundo. Ojos marrones oscuros, pelo negro"
     ),
     TYPE_6(
         "Tipo VI - Muy oscura",
-        0.7,
-        1100,
-        "Nunca se quema, piel naturalmente oscura. Ojos y pelo oscuros"
+        0.5,
+        1200,
+        "Nunca se quema, pigmentación profunda. Ojos y pelo muy oscuros"
     );
 
     companion object {
-        fun fromBurnTime(minutes: Int): SkinType {
-            return values().minByOrNull { Math.abs(it.burnTime - minutes) } ?: TYPE_3
+        fun fromInt(value: Int): SkinType {
+            return when (value) {
+                1 -> TYPE_1
+                2 -> TYPE_2
+                3 -> TYPE_3
+                4 -> TYPE_4
+                5 -> TYPE_5
+                6 -> TYPE_6
+                else -> TYPE_2 // Default
+            }
         }
 
-        fun getDefaultType() = TYPE_3
+        fun getDefaultType() = TYPE_2
+    }
 
-        fun getDescription(type: SkinType): String {
-            return "${type.descriptionText}\n${type.detailedDescription}"
-        }
+    fun getSafeExposureMinutes(uvIndex: Double): Int {
+        return if (uvIndex > 0) (burnTime / uvIndex * 0.25).toInt() else burnTime
     }
 }

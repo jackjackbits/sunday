@@ -57,14 +57,3 @@
     </LinearLayout>
 
 </RelativeLayout>
-                val views = RemoteViews(context.packageName, R.layout.widget_sunday)
-
-                cachedData?.let {
-                    views.setTextViewText(R.id.current_uv, String.format("%.1f", it.maxUV))
-                }
-
-                appWidgetManager.updateAppWidget(appWidgetId, views)
-            }
-        }
-    }
-}

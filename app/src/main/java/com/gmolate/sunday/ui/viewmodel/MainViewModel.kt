@@ -54,6 +54,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val moonAge: StateFlow<Double> = moonPhaseService.moonAge
     val moonFraction: StateFlow<Double> = moonPhaseService.moonFraction
 
+    // Alias para compatibilidad con ContentView
+    val moonPhase: StateFlow<Double> = moonFraction
+
+    // Estados adicionales para ContentView
+    private val _healthData = MutableStateFlow<Any?>(null)
+    val healthData: StateFlow<Any?> = _healthData.asStateFlow()
+
+    private val _vitaminDProgress = MutableStateFlow(0.0)
+    val vitaminDProgress: StateFlow<Double> = _vitaminDProgress.asStateFlow()
+
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = combine(
         locationManager.error,
@@ -81,6 +91,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             // Usar un solo Job para todas las colecciones para mejor manejo de memoria
             launch {
                 networkMonitor.isOnline.collect { isOnline ->
+                    _isOfflineMode.value = !isOnline
                     if (isOnline) {
                         updateUVData()
                         // Actualizar fases lunares cuando hay conexión
@@ -118,73 +129,59 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
             launch { uvService.isOfflineMode.collect { _isOfflineMode.value = it } }
-        }
-    }
 
-    private fun updateUVData() {
-        viewModelScope.launch {
-            location.value?.let { loc ->
-                uvService.fetchUVData(loc)
+            // Calcular progreso de vitamina D basado en la sesión actual
+            launch {
+                sessionVitaminD.collect { sessionVitD ->
+                    // Calcular progreso basado en objetivo diario (ej: 1000 IU)
+                    val dailyGoal = 1000.0
+                    _vitaminDProgress.value = (sessionVitD / dailyGoal * 100).coerceAtMost(100.0)
+                }
             }
         }
     }
 
-    fun updateClothingLevel(level: ClothingLevel) {
-        vitaminDCalculator.clothingLevel.value = level
-    }
-
-    fun updateSkinType(type: SkinType) {
-        vitaminDCalculator.skinType.value = type
-    }
-
     fun fetchLocation() {
-        viewModelScope.launch {
-            locationManager.fetchLocation()
-        }
+        locationManager.requestLocation()
     }
 
     fun fetchUvData(location: Location) {
         viewModelScope.launch {
-            uvService.fetchUVData(location)
-        }
-    }
-
-    fun toggleSunExposure() {
-        viewModelScope.launch {
-            vitaminDCalculator.toggleSunExposure(currentUV.value, viewModelScope)
+            uvService.updateUVData(location)
         }
     }
 
     fun updateUv(uv: Double) {
-        viewModelScope.launch {
-            vitaminDCalculator.updateUV(uv)
-        }
+        _currentUV.value = uv
     }
 
     fun hasHealthPermissions(): Boolean {
-        return healthManager.hasPermissions()
+        return healthManager.hasHealthPermissions()
     }
 
     fun requestHealthPermissions(activity: Activity, launcher: ActivityResultLauncher<Intent>) {
-        healthManager.requestPermissions(activity)
+        healthManager.requestHealthPermissions(activity, launcher)
     }
 
     fun fetchHealthData() {
         viewModelScope.launch {
-            vitaminDCalculator.updateUV(currentUV.value)
-        }
-    }
-
-    fun enableSolarNoonNotifications(enabled: Boolean) {
-        solarNoonService.setSolarNoonNotificationEnabled(enabled)
-        if (enabled) {
-            location.value?.let { loc ->
-                solarNoonService.scheduleSolarNoonNotification(loc)
+            try {
+                val healthData = healthManager.getHealthData()
+                _healthData.value = healthData
+            } catch (e: Exception) {
+                _error.value = "Error al obtener datos de salud: ${e.message}"
             }
         }
     }
 
-    fun isSolarNoonNotificationEnabled(): Boolean {
-        return solarNoonService.isSolarNoonNotificationEnabled()
+    private fun updateUVData() {
+        _location.value?.let { location ->
+            fetchUvData(location)
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Limpiar recursos si es necesario
     }
 }

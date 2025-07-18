@@ -56,40 +56,85 @@ class HealthManager(private val context: Context) {
         saveVitaminD(amount)
     }
 
+    suspend fun getHealthData(): Map<String, Any>? {
+        val account = getGoogleAccount() ?: return null
+
+        return try {
+            val cal = Calendar.getInstance()
+            val endTime = cal.timeInMillis
+            cal.add(Calendar.DAY_OF_YEAR, -30) // Últimos 30 días
+            val startTime = cal.timeInMillis
+
+            val readRequest = DataReadRequest.Builder()
+                .aggregate(DataType.TYPE_NUTRITION)
+                .bucketByTime(1, TimeUnit.DAYS)
+                .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
+                .build()
+
+            val response = Fitness.getHistoryClient(context, account)
+                .readData(readRequest)
+                .await()
+
+            // Procesar datos de nutrición
+            val vitaminDData = mutableListOf<Float>()
+            for (bucket in response.buckets) {
+                for (dataSet in bucket.dataSets) {
+                    for (dataPoint in dataSet.dataPoints) {
+                        val nutrients = dataPoint.getValue(Field.FIELD_NUTRIENTS).asMap()
+                        val vitaminD = nutrients["vitamin_d"] as? Float ?: 0f
+                        if (vitaminD > 0) {
+                            vitaminDData.add(vitaminD)
+                        }
+                    }
+                }
+            }
+
+            mapOf(
+                "vitamin_d_data" to vitaminDData,
+                "total_vitamin_d" to vitaminDData.sum(),
+                "average_vitamin_d" to if (vitaminDData.isNotEmpty()) vitaminDData.average() else 0.0,
+                "days_with_data" to vitaminDData.size
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     suspend fun getTodayVitaminD(): Double {
         val account = getGoogleAccount() ?: return 0.0
 
-        val endTime = System.currentTimeMillis()
-        val startTime = Calendar.getInstance().apply {
-            timeInMillis = endTime
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-        }.timeInMillis
+        return try {
+            val cal = Calendar.getInstance()
+            cal.set(Calendar.HOUR_OF_DAY, 0)
+            cal.set(Calendar.MINUTE, 0)
+            cal.set(Calendar.SECOND, 0)
+            cal.set(Calendar.MILLISECOND, 0)
+            val startTime = cal.timeInMillis
 
-        val readRequest = DataReadRequest.Builder()
-            .read(DataType.TYPE_NUTRITION)
-            .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
-            .build()
+            cal.add(Calendar.DAY_OF_YEAR, 1)
+            val endTime = cal.timeInMillis
 
-        try {
+            val readRequest = DataReadRequest.Builder()
+                .read(DataType.TYPE_NUTRITION)
+                .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
+                .build()
+
             val response = Fitness.getHistoryClient(context, account)
                 .readData(readRequest)
                 .await()
 
             var totalVitaminD = 0.0
-            response.dataSets.forEach { dataSet ->
-                dataSet.dataPoints.forEach { point ->
-                    point.getValue(Field.FIELD_NUTRIENTS)?.let { nutrients ->
-                        @Suppress("UNCHECKED_CAST")
-                        val map = nutrients as Map<String, Float>
-                        totalVitaminD += (map["vitamin_d"] ?: 0f).toDouble()
-                    }
+            for (dataSet in response.dataSets) {
+                for (dataPoint in dataSet.dataPoints) {
+                    val nutrients = dataPoint.getValue(Field.FIELD_NUTRIENTS).asMap()
+                    val vitaminD = nutrients["vitamin_d"] as? Float ?: 0f
+                    totalVitaminD += vitaminD
                 }
             }
-            return totalVitaminD
+
+            totalVitaminD
         } catch (e: Exception) {
-            return 0.0
+            0.0
         }
     }
 
@@ -147,6 +192,20 @@ class HealthManager(private val context: Context) {
                 account,
                 fitnessOptions
             )
+        }
+    }
+
+    fun hasHealthPermissions(): Boolean {
+        val account = getGoogleAccount()
+        return GoogleSignIn.hasPermissions(account, fitnessOptions)
+    }
+
+    fun requestHealthPermissions(activity: Activity, launcher: androidx.activity.result.ActivityResultLauncher<android.content.Intent>) {
+        val account = getGoogleAccount()
+        if (!GoogleSignIn.hasPermissions(account, fitnessOptions)) {
+            val intent = GoogleSignIn.getClient(activity, GoogleSignIn.getAccountForExtension(activity, fitnessOptions))
+                .signInIntent
+            launcher.launch(intent)
         }
     }
 

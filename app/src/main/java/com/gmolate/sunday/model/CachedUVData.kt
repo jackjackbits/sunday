@@ -2,6 +2,7 @@ package com.gmolate.sunday.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -24,25 +25,24 @@ data class CachedUVData(
 )
 
 class Converters {
-    @androidx.room.TypeConverter
-    fun fromString(value: String): List<Double> {
+    @TypeConverter
+    fun fromDoubleList(value: List<Double>): String {
+        return Gson().toJson(value)
+    }
+
+    @TypeConverter
+    fun toDoubleList(value: String): List<Double> {
         val listType = object : TypeToken<List<Double>>() {}.type
         return Gson().fromJson(value, listType)
     }
 
-    @androidx.room.TypeConverter
-    fun fromList(list: List<Double>): String {
-        val gson = Gson()
-        return gson.toJson(list)
-    }
-
-    @androidx.room.TypeConverter
-    fun fromTimestamp(value: Long?): Date? {
-        return value?.let { Date(it) }
-    }
-
-    @androidx.room.TypeConverter
-    fun dateToTimestamp(date: Date?): Long? {
+    @TypeConverter
+    fun fromDate(date: Date?): Long? {
         return date?.time
+    }
+
+    @TypeConverter
+    fun toDate(timestamp: Long?): Date? {
+        return timestamp?.let { Date(it) }
     }
 }

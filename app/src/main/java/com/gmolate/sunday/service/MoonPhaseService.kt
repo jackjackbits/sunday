@@ -49,101 +49,97 @@ class MoonPhaseService(
             
             if (cachedData != null && isDataStillValid(cachedData.lastUpdated)) {
                 updateMoonData(cachedData)
-                _isLoading.value = false
                 return
             }
 
-            val timestamp = System.currentTimeMillis() / 1000
-            val response = api.getMoonPhase(timestamp)
-            
+            val response = api.getMoonPhase(today)
+
+            // Guardar en caché
             val moonData = CachedMoonData(
-                date = today,
-                phaseName = response.Phase,
-                phaseIcon = getMoonIconForPhase(response.Phase),
-                age = response.Age,
-                fraction = response.Fraction,
+                latitude = 0.0, // Global data
+                longitude = 0.0,
+                date = Date(),
+                moonPhase = response.moonPhase,
+                moonrise = parseTime(response.moonrise),
+                moonset = parseTime(response.moonset),
+                illumination = response.illumination,
+                distanceKm = response.distanceKm,
                 lastUpdated = Date()
             )
             
             db.cachedMoonDataDao().insertMoonData(moonData)
             updateMoonData(moonData)
             
-            // Limpiar datos antiguos de forma asíncrona para mejor rendimiento
-            cleanupOldDataAsync()
-            
         } catch (e: HttpException) {
-            handleError()
+            handleError(e)
         } catch (e: Exception) {
-            handleError()
+            handleError(e)
         } finally {
             _isLoading.value = false
         }
     }
 
-    private suspend fun cleanupOldDataAsync() {
-        try {
-            val cutoffDate = Calendar.getInstance().apply {
-                add(Calendar.DAY_OF_YEAR, -30)
-            }
-            db.cachedMoonDataDao().deleteOldMoonData(dateFormat.format(cutoffDate.time))
-        } catch (e: Exception) {
-            // Silenciosamente ignorar errores de limpieza
+    private fun updateMoonData(moonData: CachedMoonData) {
+        _moonAge.value = moonData.moonPhase * 29.53 // Ciclo lunar promedio
+        _moonFraction.value = moonData.illumination / 100.0
+        _currentMoonPhase.value = getMoonPhaseName(moonData.moonPhase)
+        _currentMoonIcon.value = getMoonIcon(moonData.moonPhase)
+    }
+
+    private fun getMoonPhaseName(phase: Double): String {
+        return when {
+            phase < 0.125 -> "Luna Nueva"
+            phase < 0.25 -> "Cuarto Creciente"
+            phase < 0.375 -> "Creciente Gibosa"
+            phase < 0.5 -> "Luna Llena"
+            phase < 0.625 -> "Menguante Gibosa"
+            phase < 0.75 -> "Cuarto Menguante"
+            phase < 0.875 -> "Menguante"
+            else -> "Luna Nueva"
         }
     }
 
-    private fun updateMoonData(moonData: CachedMoonData) {
-        _currentMoonPhase.value = moonData.phaseName
-        _currentMoonIcon.value = moonData.phaseIcon
-        _moonAge.value = moonData.age
-        _moonFraction.value = moonData.fraction
-    }
-
-    private suspend fun handleError() {
-        // Intentar usar datos cacheados aunque sean antiguos
-        val cachedData = db.cachedMoonDataDao().getLatestMoonData()
-        if (cachedData != null) {
-            updateMoonData(cachedData)
-        } else {
-            // Usar valores por defecto
-            _currentMoonPhase.value = "Waxing Gibbous"
-            _currentMoonIcon.value = "🌔"
-            _moonAge.value = 10.0
-            _moonFraction.value = 0.75
+    private fun getMoonIcon(phase: Double): String {
+        return when {
+            phase < 0.125 -> "🌑"
+            phase < 0.25 -> "🌒"
+            phase < 0.375 -> "🌓"
+            phase < 0.5 -> "🌔"
+            phase < 0.625 -> "🌕"
+            phase < 0.75 -> "🌖"
+            phase < 0.875 -> "🌗"
+            else -> "🌘"
         }
     }
 
     private fun isDataStillValid(lastUpdated: Date): Boolean {
         val now = Date()
         val diffInHours = (now.time - lastUpdated.time) / (1000 * 60 * 60)
-        return diffInHours < 12 // Los datos de luna son válidos por 12 horas
+        return diffInHours < 24 // Datos válidos por 24 horas
     }
 
-    private fun getMoonIconForPhase(phase: String): String {
-        return when (phase.lowercase()) {
-            "new moon", "new" -> "🌑"
-            "waxing crescent" -> "🌒"
-            "first quarter" -> "🌓"
-            "waxing gibbous" -> "🌔"
-            "full moon", "full" -> "🌕"
-            "waning gibbous" -> "🌖"
-            "last quarter", "third quarter" -> "🌗"
-            "waning crescent" -> "🌘"
-            else -> "🌕" // Por defecto luna llena
+    private fun parseTime(timeString: String?): Date? {
+        if (timeString == null) return null
+        return try {
+            val format = SimpleDateFormat("HH:mm", Locale.getDefault())
+            format.parse(timeString)
+        } catch (e: Exception) {
+            null
         }
     }
 
-    fun getMoonIconResourceForWidget(phase: String): String {
-        // Para el widget de Android usaremos nombres de recursos
-        return when (phase.lowercase()) {
-            "new moon", "new" -> "ic_moon_new"
-            "waxing crescent" -> "ic_moon_waxing_crescent"
-            "first quarter" -> "ic_moon_first_quarter"
-            "waxing gibbous" -> "ic_moon_waxing_gibbous"
-            "full moon", "full" -> "ic_moon_full"
-            "waning gibbous" -> "ic_moon_waning_gibbous"
-            "last quarter", "third quarter" -> "ic_moon_last_quarter"
-            "waning crescent" -> "ic_moon_waning_crescent"
-            else -> "ic_moon_full"
+    private suspend fun handleError(e: Exception) {
+        // Intentar cargar datos del caché aunque sean antiguos
+        val today = dateFormat.format(Date())
+        val cachedData = db.cachedMoonDataDao().getMoonDataForDate(today)
+        if (cachedData != null) {
+            updateMoonData(cachedData)
+        } else {
+            // Valores por defecto si no hay caché
+            _currentMoonPhase.value = "Fase Desconocida"
+            _currentMoonIcon.value = "🌙"
+            _moonAge.value = 0.0
+            _moonFraction.value = 0.5
         }
     }
 }

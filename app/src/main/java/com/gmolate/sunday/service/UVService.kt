@@ -97,184 +97,120 @@ class UVService(
         }
     }
 
+    suspend fun updateUVData(location: Location) {
+        fetchUVData(location)
+    }
+
     private suspend fun handleError(e: Exception, location: Location) {
         val cachedData = getCachedDataForLocation(location)
         if (cachedData != null) {
             processUvData(cachedData)
             _isOfflineMode.value = true
-            _error.value = "Using cached data: ${e.message}"
+            _error.value = "Usando datos guardados - Sin conexión"
         } else {
-            _error.value = "Error fetching UV data: ${e.message}"
+            _isOfflineMode.value = true
+            _error.value = "Error al obtener datos UV: ${e.message}"
         }
-    }
-
-    private suspend fun getCachedDataForLocation(location: Location): CachedUVData? {
-        val tolerance = 0.01 // aproximadamente 1km
-        return db.cachedUVDataDao().getCachedData(
-            minLat = location.latitude - tolerance,
-            maxLat = location.latitude + tolerance,
-            minLon = location.longitude - tolerance,
-            maxLon = location.longitude + tolerance,
-            startDate = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-            }.time,
-            endDate = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 23)
-                set(Calendar.MINUTE, 59)
-                set(Calendar.SECOND, 59)
-            }.time
-        ).firstOrNull()
-    }
-
-    private fun isDataStillValid(lastUpdated: Date): Boolean {
-        val currentTime = System.currentTimeMillis()
-        val timeDifference = currentTime - lastUpdated.time
-        return timeDifference < 30 * 60 * 1000 // 30 minutos
-    }
-
-    private fun calculateBurnTimes(uvIndex: Double) {
-        val burnTimes = mutableMapOf<Int, Int>()
-        for (skinType in 1..6) {
-            val baseTime = when (skinType) {
-                1 -> 150
-                2 -> 250
-                3 -> 425
-                4 -> 600
-                5 -> 850
-                6 -> 1100
-                else -> 425
-            }
-            val adjustedTime = if (uvIndex > 0) {
-                (baseTime / uvIndex).toInt()
-            } else {
-                Int.MAX_VALUE
-            }
-            burnTimes[skinType] = adjustedTime
-        }
-        _burnTimeMinutes.value = burnTimes
     }
 
     private suspend fun processUvData(response: OpenMeteoResponse, location: Location) {
-        val altitudeMultiplier = 1.0 + (location.altitude / 1000.0 * 0.1)
-
-        // Datos de hoy
-        response.daily.uv_index_max.firstOrNull()?.let { todayMaxUv ->
-            _maxUV.value = todayMaxUv * altitudeMultiplier
-        }
-
-        // Datos de mañana
-        response.daily.uv_index_max.getOrNull(1)?.let { tomorrowMax ->
-            _tomorrowMaxUV.value = tomorrowMax * altitudeMultiplier
-        }
-
-        val formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.getDefault())
-
-        // Amanecer/atardecer de hoy
-        _todaySunrise.value = response.daily.sunrise.firstOrNull()?.let { formatter.parse(it) }
-        _todaySunset.value = response.daily.sunset.firstOrNull()?.let { formatter.parse(it) }
-
-        // Amanecer/atardecer de mañana
-        _tomorrowSunrise.value = response.daily.sunrise.getOrNull(1)?.let { formatter.parse(it) }
-        _tomorrowSunset.value = response.daily.sunset.getOrNull(1)?.let { formatter.parse(it) }
-
-        // UV actual
-        val calendar = Calendar.getInstance()
-        val hour = calendar.get(Calendar.HOUR_OF_DAY)
-        val minute = calendar.get(Calendar.MINUTE)
-
-        val currentHourUV = response.hourly?.uv_index?.get(hour) ?: 0.0
-        val nextHourUV = response.hourly?.uv_index?.getOrNull(hour + 1) ?: currentHourUV
-        val interpolationFactor = minute / 60.0
-
-        _currentUV.value = (currentHourUV + (nextHourUV - currentHourUV) * interpolationFactor) * altitudeMultiplier
-
-        calculateBurnTimes(_currentUV.value)
-        cacheUVData(response, location)
-    }
-
-    private suspend fun cacheUVData(response: OpenMeteoResponse, location: Location) {
-        val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        formatter.timeZone = TimeZone.getTimeZone("UTC")
-        response.daily.time.forEachIndexed { index, dateString ->
-            val date = formatter.parse(dateString)
-            if (date != null) {
-                val startHour = index * 24
-                val endHour = (index + 1) * 24
-                val hourlyUv = response.hourly?.uv_index?.subList(startHour, endHour) ?: emptyList()
-                val hourlyCloudCover = response.hourly?.cloud_cover?.subList(startHour, endHour) ?: emptyList()
-                val sunrise = response.daily.sunrise.getOrNull(index)?.let { SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.getDefault()).parse(it) }
-                val sunset = response.daily.sunset.getOrNull(index)?.let { SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.getDefault()).parse(it) }
-
-                if (sunrise != null && sunset != null) {
-                    val cachedData = CachedUVData(
-                        latitude = location.latitude,
-                        longitude = location.longitude,
-                        date = date,
-                        hourlyUV = hourlyUv,
-                        hourlyCloudCover = hourlyCloudCover,
-                        maxUV = response.daily.uv_index_max.getOrNull(index) ?: 0.0,
-                        sunrise = sunrise,
-                        sunset = sunset,
-                        lastUpdated = Date()
-                    )
-                    db.cachedUVDataDao().insert(cachedData)
-                }
-            }
-        }
-    }
-
-    private suspend fun loadCachedData(location: Location) {
-        val calendar = Calendar.getInstance()
-        val today = calendar.time
-        calendar.add(Calendar.DATE, 1)
-        val tomorrow = calendar.time
-
-        val latTolerance = 0.01
-        val lonTolerance = 0.01
-        val minLat = location.latitude - latTolerance
-        val maxLat = location.latitude + latTolerance
-        val minLon = location.longitude - lonTolerance
-        val maxLon = location.longitude + lonTolerance
-
-        val cachedData = db.cachedUVDataDao().getCachedData(minLat, maxLat, minLon, maxLon, today, tomorrow)
-        val todayData = cachedData.find {
-            val todayCal = Calendar.getInstance()
-            val cachedCal = Calendar.getInstance().apply { time = it.date }
-            todayCal.get(Calendar.YEAR) == cachedCal.get(Calendar.YEAR) &&
-                    todayCal.get(Calendar.DAY_OF_YEAR) == cachedCal.get(Calendar.DAY_OF_YEAR)
-        }
-        if (todayData != null) {
-            val altitudeMultiplier = 1.0 + (location.altitude / 1000.0 * 0.1)
-            _maxUV.value = todayData.maxUV * altitudeMultiplier
-            _todaySunrise.value = todayData.sunrise
-            _todaySunset.value = todayData.sunset
-
-            val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-            _currentUV.value = todayData.hourlyUV.getOrNull(hour)?.times(altitudeMultiplier) ?: 0.0
-            calculateBurnTimes(_currentUV.value)
-        } else {
-            _error.value = "No cached data available."
-        }
-    }
-
-    private fun calculateSafeExposureTimes() {
-        val medTimesAtUV1 = mapOf(
-            1 to 150.0,
-            2 to 250.0,
-            3 to 425.0,
-            4 to 600.0,
-            5 to 850.0,
-            6 to 1100.0
+        // Guardar en caché
+        val cachedData = CachedUVData(
+            latitude = location.latitude,
+            longitude = location.longitude,
+            date = Date(),
+            hourlyUV = response.hourly.uv_index,
+            hourlyCloudCover = response.hourly.cloud_cover ?: emptyList(),
+            maxUV = response.daily.uv_index_max.firstOrNull() ?: 0.0,
+            sunrise = parseTime(response.daily.sunrise.firstOrNull()),
+            sunset = parseTime(response.daily.sunset.firstOrNull()),
+            lastUpdated = Date()
         )
 
-        val uvToUse = if (currentUV.value > 0) currentUV.value else 0.1
-        val burnTimes = mutableMapOf<Int, Int>()
-        for ((skinType, medTime) in medTimesAtUV1) {
-            val fullMED = medTime / uvToUse
-            burnTimes[skinType] = maxOf(1, fullMED.toInt())
+        db.cachedUVDataDao().insertUvData(cachedData)
+        processUvData(cachedData)
+    }
+
+    private fun processUvData(cachedData: CachedUVData) {
+        _maxUV.value = cachedData.maxUV
+        _todaySunrise.value = cachedData.sunrise
+        _todaySunset.value = cachedData.sunset
+
+        // Calcular UV actual basado en la hora
+        val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        _currentUV.value = if (currentHour < cachedData.hourlyUV.size) {
+            cachedData.hourlyUV[currentHour]
+        } else {
+            0.0
         }
+
+        // Calcular tiempos de quemadura para diferentes tipos de piel
+        calculateBurnTimes()
+    }
+
+    private suspend fun getCachedDataForLocation(location: Location): CachedUVData? {
+        val today = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.time
+
+        return db.cachedUVDataDao().getUvDataForDateAndLocation(
+            today, location.latitude, location.longitude
+        )
+    }
+
+    private fun isDataStillValid(lastUpdated: Date): Boolean {
+        val now = Date()
+        val diffInHours = (now.time - lastUpdated.time) / (1000 * 60 * 60)
+        return diffInHours < 6 // Datos válidos por 6 horas
+    }
+
+    private fun calculateBurnTimes() {
+        val currentUV = _currentUV.value
+        if (currentUV <= 0) {
+            _burnTimeMinutes.value = emptyMap()
+            return
+        }
+
+        val burnTimes = mutableMapOf<Int, Int>()
+
+        // Calcular para cada tipo de piel (1-6)
+        for (skinType in 1..6) {
+            val skinTypeEnum = SkinType.fromInt(skinType)
+            val burnTime = skinTypeEnum.getSafeExposureMinutes(currentUV)
+            burnTimes[skinType] = burnTime
+        }
+
         _burnTimeMinutes.value = burnTimes
     }
+
+    private fun parseTime(timeString: String?): Date? {
+        if (timeString == null) return null
+        return try {
+            val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.getDefault())
+            format.timeZone = TimeZone.getTimeZone("UTC")
+            format.parse(timeString)
+        } catch (e: Exception) {
+            null
+        }
+    }
 }
+
+// Data classes para la API de OpenMeteo
+data class OpenMeteoResponse(
+    val hourly: HourlyData,
+    val daily: DailyData
+)
+
+data class HourlyData(
+    val uv_index: List<Double>,
+    val cloud_cover: List<Double>?
+)
+
+data class DailyData(
+    val uv_index_max: List<Double>,
+    val sunrise: List<String>,
+    val sunset: List<String>
+)

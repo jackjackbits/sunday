@@ -49,142 +49,134 @@ class NotificationService(private val context: Context) {
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 description = "Notificaciones de objetivos diarios alcanzados"
-                enableVibration(true)
+                enableVibration(false)
                 setShowBadge(true)
             }
 
             val solarNoonChannel = NotificationChannel(
                 SOLAR_NOON_CHANNEL_ID,
                 "Mediodía Solar",
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Notificaciones del momento óptimo para exposición solar"
-                enableVibration(true)
-                setShowBadge(true)
+                description = "Recordatorios sobre el mediodía solar"
+                enableVibration(false)
+                setShowBadge(false)
             }
 
-            notificationManager.createNotificationChannel(uvChannel)
-            notificationManager.createNotificationChannel(vitaminDChannel)
-            notificationManager.createNotificationChannel(goalChannel)
-            notificationManager.createNotificationChannel(solarNoonChannel)
+            val systemNotificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            systemNotificationManager.createNotificationChannels(
+                listOf(uvChannel, vitaminDChannel, goalChannel, solarNoonChannel)
+            )
         }
     }
 
     fun showUVAlert(uvIndex: Double) {
         if (!hasNotificationPermission()) return
 
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
+        val intent = Intent(context, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(
             context, 0, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val notification = NotificationCompat.Builder(context, UV_CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("¡Índice UV Alto!")
-            .setContentText("El índice UV actual es ${String.format("%.1f", uvIndex)}. Toma precauciones.")
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("¡Alto índice UV!")
+            .setContentText("UV ${String.format("%.1f", uvIndex)} - Usa protección solar")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setAutoCancel(true)
             .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
             .build()
 
         notificationManager.notify(UV_NOTIFICATION_ID, notification)
     }
 
-    fun showVitaminDGoalReached(amount: Double) {
+    fun showVitaminDUpdate(currentIU: Double, goalIU: Double) {
         if (!hasNotificationPermission()) return
 
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
+        val percentage = (currentIU / goalIU * 100).toInt().coerceAtMost(100)
+
+        val intent = Intent(context, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(
-            context, 1, intent,
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, VITAMIN_D_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("Progreso Vitamina D")
+            .setContentText("$percentage% del objetivo diario (${String.format("%.0f", currentIU)} IU)")
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setProgress(100, percentage, false)
+            .build()
+
+        notificationManager.notify(VITAMIN_D_NOTIFICATION_ID, notification)
+    }
+
+    fun showGoalAchieved(goalType: String) {
+        if (!hasNotificationPermission()) return
+
+        val intent = Intent(context, MainActivity::class.java)
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val notification = NotificationCompat.Builder(context, GOAL_CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("¡Objetivo Alcanzado!")
-            .setContentText("Has alcanzado tu objetivo diario de vitamina D (${amount.toInt()} UI)")
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("¡Objetivo alcanzado!")
+            .setContentText("Has completado tu objetivo de $goalType")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setCategory(NotificationCompat.CATEGORY_PROGRESS)
-            .setAutoCancel(true)
             .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
             .build()
 
         notificationManager.notify(GOAL_NOTIFICATION_ID, notification)
     }
 
-    fun showExposureWarning(minutes: Int) {
+    fun showSolarNoonReminder(minutesUntilNoon: Int) {
         if (!hasNotificationPermission()) return
 
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
+        val intent = Intent(context, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(
-            context, 2, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val notification = NotificationCompat.Builder(context, VITAMIN_D_CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("¡Tiempo de Exposición!")
-            .setContentText("Has estado expuesto al sol durante $minutes minutos")
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setCategory(NotificationCompat.CATEGORY_REMINDER)
-            .setAutoCancel(true)
-            .setContentIntent(pendingIntent)
-            .build()
-
-        notificationManager.notify(EXPOSURE_NOTIFICATION_ID, notification)
-    }
-
-    fun showSolarNoonNotification() {
-        if (!hasNotificationPermission()) return
-
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
-        val pendingIntent = PendingIntent.getActivity(
-            context, 3, intent,
+            context, 0, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val notification = NotificationCompat.Builder(context, SOLAR_NOON_CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("☀️ Momento Óptimo para Vitamina D")
-            .setContentText("¡Perfecto momento para exposición solar! El UV está en su punto máximo.")
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setCategory(NotificationCompat.CATEGORY_REMINDER)
-            .setAutoCancel(true)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("Mediodía Solar")
+            .setContentText("Mejor momento para vitamina D en $minutesUntilNoon minutos")
+            .setPriority(NotificationCompat.PRIORITY_LOW)
             .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
             .build()
 
         notificationManager.notify(SOLAR_NOON_NOTIFICATION_ID, notification)
     }
 
     private fun hasNotificationPermission(): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            return ActivityCompat.checkSelfPermission(
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ActivityCompat.checkSelfPermission(
                 context,
                 Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
         }
-        return true
     }
 
     companion object {
-        private const val UV_CHANNEL_ID = "uv_alerts"
-        private const val VITAMIN_D_CHANNEL_ID = "vitamin_d_updates"
-        private const val GOAL_CHANNEL_ID = "goal_reached"
-        private const val SOLAR_NOON_CHANNEL_ID = "solar_noon"
-        private const val UV_NOTIFICATION_ID = 1001
-        private const val VITAMIN_D_NOTIFICATION_ID = 1002
-        private const val GOAL_NOTIFICATION_ID = 1003
-        private const val EXPOSURE_NOTIFICATION_ID = 1004
-        private const val SOLAR_NOON_NOTIFICATION_ID = 1005
+        const val UV_CHANNEL_ID = "uv_alerts"
+        const val VITAMIN_D_CHANNEL_ID = "vitamin_d_updates"
+        const val GOAL_CHANNEL_ID = "goal_achievements"
+        const val SOLAR_NOON_CHANNEL_ID = "solar_noon"
+
+        const val UV_NOTIFICATION_ID = 1001
+        const val VITAMIN_D_NOTIFICATION_ID = 1002
+        const val GOAL_NOTIFICATION_ID = 1003
+        const val SOLAR_NOON_NOTIFICATION_ID = 1004
     }
 }

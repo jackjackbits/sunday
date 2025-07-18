@@ -49,110 +49,125 @@ class VitaminDCalculator(private val healthManager: HealthManager) {
     }
 
     private fun startSession(uvIndex: Double, scope: CoroutineScope) {
-        _sessionVitaminD.value = 0.0
         lastUV = uvIndex
+        _sessionVitaminD.value = 0.0
 
         timerJob = scope.launch {
-            flow {
-                while (true) {
-                    emit(Unit)
-                    delay(1000) // Actualizar cada segundo
+            while (_isInSun.value) {
+                delay(60_000) // 1 minuto
+                if (_isInSun.value) {
+                    val vitaminDGenerated = calculateVitaminDPerMinute(lastUV)
+                    _sessionVitaminD.value += vitaminDGenerated
+                    _currentVitaminDRate.value = vitaminDGenerated
                 }
-            }.collect {
-                updateVitaminD(lastUV)
             }
         }
-
-        updateVitaminDRate(uvIndex)
     }
 
     private fun stopSession() {
         timerJob?.cancel()
         timerJob = null
+        _currentVitaminDRate.value = 0.0
+    }
+
+    suspend fun calculateVitaminDPerMinute(uvIndex: Double): Double {
+        if (uvIndex <= 0) return 0.0
+
+        val baseRate = calculateBaseVitaminDRate(uvIndex)
+        val skinFactor = _skinType.value.vitaminDFactor
+        val clothingFactor = _clothingLevel.value.exposureFactor
+        val ageFactor = healthManager.getAgeFactor()
+        val adaptationFactor = healthManager.getAdaptationFactor()
+
+        return baseRate * skinFactor * clothingFactor * ageFactor * adaptationFactor
+    }
+
+    private fun calculateBaseVitaminDRate(uvIndex: Double): Double {
+        // Fórmula basada en estudios científicos
+        // UV óptimo alrededor de 4-6, con rendimientos decrecientes después
+        val uvFactor = when {
+            uvIndex <= 0 -> 0.0
+            uvIndex <= 2 -> uvIndex / 2.0 * 0.5
+            uvIndex <= 6 -> 0.5 + (uvIndex - 2) / 4.0 * 0.5
+            else -> 1.0 - exp(-(uvIndex - 6) / 3.0) * 0.2
+        }
+
+        // Factor de tiempo solar (mejor al mediodía)
+        val solarTimeFactor = calculateSolarTimeFactor()
+
+        // Tasa base: ~1000 IU en 10-15 minutos de exposición óptima
+        val baseIUPerMinute = 80.0
+
+        return baseIUPerMinute * uvFactor * solarTimeFactor
+    }
+
+    private fun calculateSolarTimeFactor(): Double {
+        val calendar = Calendar.getInstance()
+        val hour = calendar.get(Calendar.HOUR_OF_DAY)
+        val minute = calendar.get(Calendar.MINUTE)
+        val timeInHours = hour + minute / 60.0
+
+        // Mediodía solar óptimo (12:00), con reducción gradual
+        val distanceFromNoon = abs(timeInHours - 12.0)
+
+        return when {
+            distanceFromNoon <= 1 -> 1.0 // 11:00 - 13:00
+            distanceFromNoon <= 2 -> 0.8 // 10:00 - 14:00
+            distanceFromNoon <= 3 -> 0.6 // 09:00 - 15:00
+            distanceFromNoon <= 4 -> 0.4 // 08:00 - 16:00
+            else -> 0.2 // Temprano en la mañana o tarde
+        }
     }
 
     fun updateUV(uvIndex: Double) {
         lastUV = uvIndex
-        updateVitaminDRate(uvIndex)
-    }
-
-    private fun updateVitaminD(uvIndex: Double) {
-        if (!_isInSun.value) return
-
-        val rate = calculateVitaminDRate(uvIndex)
-        val increment = rate / 3600.0 // Convertir tasa por hora a tasa por segundo
-        
-        // Aplicar límite diario máximo de forma gradual
-        val currentTotal = _sessionVitaminD.value + increment
-        val dailyLimit = dailyVitaminDGoal * 2.0 // Máximo 2x el objetivo diario
-        
-        if (currentTotal <= dailyLimit) {
-            _sessionVitaminD.value = currentTotal
-        } else {
-            // Reducir la tasa cuando nos acercamos al límite
-            val remainingCapacity = (dailyLimit - _sessionVitaminD.value).coerceAtLeast(0.0)
-            _sessionVitaminD.value += (increment * 0.1).coerceAtMost(remainingCapacity)
-        }
-
-        // Si alcanzamos el objetivo diario, notificar
-        if (_sessionVitaminD.value >= dailyVitaminDGoal) {
-            stopSession()
-            healthManager.saveVitaminDSession(_sessionVitaminD.value)
+        if (_isInSun.value) {
+            // Actualizar tasa actual si estamos en sesión
+            _currentVitaminDRate.value = calculateVitaminDPerMinute(uvIndex)
         }
     }
 
-    private fun updateVitaminDRate(uvIndex: Double) {
-        _currentVitaminDRate.value = calculateVitaminDRate(uvIndex)
+    fun setSkinType(skinType: SkinType) {
+        _skinType.value = skinType
     }
 
-    private fun calculateVitaminDRate(uvIndex: Double): Double {
-        // Validar entrada
-        if (uvIndex <= 0 || uvIndex.isNaN() || uvIndex.isInfinite()) return 0.0
-
-        // Factor base por tipo de piel
-        val skinFactor = _skinType.value.vitaminDFactor
-
-        // Factor por ropa
-        val clothingFactor = _clothingLevel.value.exposureFactor
-
-        // Factor por hora del día (mejor absorción cerca del mediodía)
-        val timeQualityFactor = calculateTimeQualityFactor()
-
-        // Factor por adaptación (basado en exposición previa)
-        val adaptationFactor = calculateAdaptationFactor()
-
-        // Fórmula mejorada para el cálculo de vitamina D con límites más realistas
-        val normalizedUV = (uvIndex / uvHalfMax).coerceIn(0.0, 3.0) // Limitar valores extremos
-        val baseRate = 1000.0 * (1.0 - exp(-normalizedUV * uvMaxFactor))
-
-        val calculatedRate = baseRate * skinFactor * clothingFactor * timeQualityFactor * adaptationFactor
-        
-        // Aplicar límites realistas
-        return calculatedRate.coerceIn(0.0, 5000.0) // Máximo 5000 UI/hora
+    fun setClothingLevel(level: ClothingLevel) {
+        _clothingLevel.value = level
     }
 
-    private fun calculateTimeQualityFactor(): Double {
-        val calendar = Calendar.getInstance()
-        val hour = calendar.get(Calendar.HOUR_OF_DAY)
-        val minute = calendar.get(Calendar.MINUTE)
-        val timeDecimal = hour + minute / 60.0
+    fun getEstimatedTimeForGoal(uvIndex: Double, goalIU: Double = dailyVitaminDGoal): Int {
+        if (uvIndex <= 0) return Int.MAX_VALUE
 
-        // Factor de calidad basado en la hora del día (pico a las 13:00)
-        val hoursFromNoon = abs(timeDecimal - 13.0)
-        return max(0.1, exp(-hoursFromNoon * 0.2))
+        val ratePerMinute = calculateVitaminDPerMinute(uvIndex)
+        if (ratePerMinute <= 0) return Int.MAX_VALUE
+
+        return (goalIU / ratePerMinute).toInt()
     }
 
-    private fun calculateAdaptationFactor(): Double {
-        // Este factor se podría calcular basándose en el historial de exposición
-        // Por ahora retornamos un valor fijo
-        return 1.0
+    fun getSafeExposureTime(uvIndex: Double): Int {
+        if (uvIndex <= 0) return 60 // Default 1 hora si no hay UV
+
+        return _skinType.value.getSafeExposureMinutes(uvIndex)
     }
 
-    private fun calculateSeasonalFactor(): Double {
-        val calendar = Calendar.getInstance()
-        val dayOfYear = calendar.get(Calendar.DAY_OF_YEAR)
+    fun getOptimalExposureTime(uvIndex: Double): Int {
+        val safeTime = getSafeExposureTime(uvIndex)
+        val goalTime = getEstimatedTimeForGoal(uvIndex, dailyVitaminDGoal / 2) // 50% del objetivo
 
-        // Factor estacional basado en el día del año
-        return 0.8 + 0.2 * sin(2.0 * PI * (dayOfYear - 172) / 365.0)
+        return minOf(safeTime, goalTime)
+    }
+
+    suspend fun getDailyProgress(): Double {
+        val todayVitaminD = healthManager.getTodayVitaminD()
+        val sessionVitD = _sessionVitaminD.value
+        val total = todayVitaminD + sessionVitD
+
+        return (total / dailyVitaminDGoal * 100.0).coerceAtMost(100.0)
+    }
+
+    fun reset() {
+        stopSession()
+        _sessionVitaminD.value = 0.0
+        _isInSun.value = false
     }
 }
