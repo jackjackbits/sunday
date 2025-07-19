@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign // Importar TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gmolate.sunday.ui.viewmodel.MainViewModel
@@ -21,7 +22,7 @@ import com.gmolate.sunday.ui.viewmodel.MainViewModel
 @Composable
 fun ContentView(viewModel: MainViewModel) {
     val currentUv by viewModel.currentUV.collectAsState()
-    val moonPhase by viewModel.moonPhase.collectAsState()
+    val moonPhase by viewModel.moonPhase.moonPhase.collectAsState() // Asumo que moonPhase es un StateFlow de un objeto con una propiedad moonPhase
     val location by viewModel.location.collectAsState()
     val error by viewModel.error.collectAsState()
     val isOfflineMode by viewModel.isOfflineMode.collectAsState()
@@ -70,6 +71,15 @@ fun ContentView(viewModel: MainViewModel) {
                     )
                 }
             }
+
+            // Cita Diaria (nueva sección)
+            // TODO: Obtener la cita real de una fuente de datos, quizás del ViewModel
+            val currentQuoteText = "La vida es como una bicicleta, para mantener el equilibrio tienes que seguir adelante."
+            val currentQuoteAuthor = "Albert Einstein"
+
+            DailyQuoteCard(quote = currentQuoteText, author = currentQuoteAuthor)
+
+            Spacer(modifier = Modifier.height(16.dp)) // Espacio entre la cita y el contenido principal
 
             // Título principal
             Text(
@@ -168,6 +178,36 @@ fun ContentView(viewModel: MainViewModel) {
             healthData?.let { health ->
                 HealthDataCard(healthData = health)
             }
+        }
+    }
+}
+
+@Composable
+fun DailyQuoteCard(quote: String, author: String) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = quote,
+                style = MaterialTheme.typography.headlineSmall, // Ajustado para no ser demasiado grande
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Text(
+                text = "- $author",
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
         }
     }
 }
