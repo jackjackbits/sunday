@@ -1,145 +1,75 @@
 package com.gmolate.sunday.ui.view
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.gmolate.sunday.ui.viewmodel.MainViewModel
+import com.gmolate.sunday.data.UserPreferencesRepository
+import kotlinx.coroutines.launch
 
 @Composable
-fun SettingsView(
-    mainViewModel: MainViewModel,
-    onBack: () -> Unit
-) {
-    var solarNoonEnabled by remember { mutableStateOf(false) }
+fun SettingsView() {
+    val context = LocalContext.current
+    val userPreferencesRepository = UserPreferencesRepository(context)
+    val theme = userPreferencesRepository.theme.collectAsState(initial = "system").value
+    val coroutineScope = rememberCoroutineScope()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // Header
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text("Theme", style = androidx.compose.material3.MaterialTheme.typography.titleLarge)
         Row(
             modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            TextButton(onClick = onBack) {
-                Text("← Back", color = Color.White)
-            }
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = "Settings",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-            Spacer(modifier = Modifier.weight(1f))
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Notificaciones section
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.1f))
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = "📱 Notificaciones",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-
-                // Solar Noon Notifications
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "🌅 Mediodía Solar",
-                            fontSize = 16.sp,
-                            color = Color.White,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = "Notificación 30 min antes del pico UV",
-                            fontSize = 12.sp,
-                            color = Color.White.copy(alpha = 0.7f)
-                        )
+            Text("System")
+            RadioButton(
+                selected = theme == "system",
+                onClick = {
+                    coroutineScope.launch {
+                        userPreferencesRepository.saveTheme("system")
                     }
-                    Switch(
-                        checked = solarNoonEnabled,
-                        onCheckedChange = { enabled ->
-                            solarNoonEnabled = enabled
-                            // TODO: Implementar enableSolarNoonNotifications en MainViewModel
-                            // mainViewModel.enableSolarNoonNotifications(enabled)
-                        },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = Color(0xFF4CAF50),
-                            uncheckedThumbColor = Color.Gray,
-                            uncheckedTrackColor = Color.DarkGray
-                        )
-                    )
                 }
-            }
+            )
         }
-
-        // Info section
-        Card(
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.1f))
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "ℹ️ Información",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                
-                Text(
-                    text = "• El mediodía solar es el momento de máximo UV del día",
-                    fontSize = 14.sp,
-                    color = Color.White.copy(alpha = 0.9f)
-                )
-                
-                Text(
-                    text = "• Es el momento óptimo para la síntesis de vitamina D",
-                    fontSize = 14.sp,
-                    color = Color.White.copy(alpha = 0.9f)
-                )
-                
-                Text(
-                    text = "• Las notificaciones te ayudan a planificar tu exposición",
-                    fontSize = 14.sp,
-                    color = Color.White.copy(alpha = 0.9f)
-                )
-            }
+            Text("Light")
+            RadioButton(
+                selected = theme == "light",
+                onClick = {
+                    coroutineScope.launch {
+                        userPreferencesRepository.saveTheme("light")
+                    }
+                }
+            )
         }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        // Version info
-        Text(
-            text = "Sunday for Android v2.0",
-            fontSize = 12.sp,
-            color = Color.White.copy(alpha = 0.5f),
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Dark")
+            RadioButton(
+                selected = theme == "dark",
+                onClick = {
+                    coroutineScope.launch {
+                        userPreferencesRepository.saveTheme("dark")
+                    }
+                }
+            )
+        }
     }
 }

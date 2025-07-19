@@ -22,6 +22,8 @@ import com.gmolate.sunday.ui.theme.SundayTheme // Asegúrate de que esta ruta se
 
 // Importación necesaria para isSystemInDarkTheme, si se usará para el tema
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.collectAsState
+import com.gmolate.sunday.data.UserPreferencesRepository
 
 class MainActivity : ComponentActivity() {
     private val mainViewModel: MainViewModel by viewModels()
@@ -56,10 +58,14 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            // Aquí se envuelve el ContentView con el tema principal de la aplicación.
-            // Para el modo oscuro, por ahora, se usará el tema del sistema.
-            // La lógica para que el tema reaccione a preferencias del usuario será un paso manual posterior.
-            val useDarkTheme = isSystemInDarkTheme() // Determina si usar tema oscuro basado en el sistema
+            val userPreferencesRepository = UserPreferencesRepository(this)
+            val theme = userPreferencesRepository.theme.collectAsState(initial = "system").value
+            val useDarkTheme = when (theme) {
+                "light" -> false
+                "dark" -> true
+                else -> isSystemInDarkTheme()
+            }
+
             SundayTheme(darkTheme = useDarkTheme) {
                 Surface(color = MaterialTheme.colorScheme.background) {
                     ContentView(viewModel)
