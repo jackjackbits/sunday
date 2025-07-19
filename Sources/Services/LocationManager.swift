@@ -18,7 +18,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     
     private let manager = CLLocationManager()
     private let geocoder = CLGeocoder()
-    private let sharedDefaults = UserDefaults(suiteName: "group.sunday.widget")
+    private let sharedDefaults = UserDefaults(suiteName: "group.jh.sunday.widget")
     
     // Geocoding cache
     private var geocodeCache: [String: String] = [:]
@@ -56,25 +56,30 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         manager.requestWhenInUseAuthorization()
     }
     
+    // Keep this for general, low-power location updates
     func startUpdatingLocation() {
-        guard !isUpdatingLocation else { return }
-        isUpdatingLocation = true
         manager.startUpdatingLocation()
     }
     
     func stopUpdatingLocation() {
-        guard isUpdatingLocation else { return }
-        isUpdatingLocation = false
         manager.stopUpdatingLocation()
     }
     
-    func startSignificantLocationChanges() {
-        // Use significant location changes for battery efficiency
-        manager.startMonitoringSignificantLocationChanges()
+    // NEW: For use during a Live Activity session
+    func startHighFrequencyUpdates() {
+        manager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
+        manager.distanceFilter = kCLDistanceFilterNone
+        manager.allowsBackgroundLocationUpdates = true // Crucial for background execution
+        manager.startUpdatingLocation()
     }
     
-    func stopSignificantLocationChanges() {
-        manager.stopMonitoringSignificantLocationChanges()
+    // NEW: Revert to power-saving mode after a session
+    func stopHighFrequencyUpdates() {
+        manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+        manager.distanceFilter = 500
+        manager.allowsBackgroundLocationUpdates = false
+        // You can either stop updates completely or switch to a more efficient mode
+        manager.startMonitoringSignificantLocationChanges()
     }
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
@@ -90,16 +95,12 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         if let lastLocation = lastGeocodedLocation,
            newLocation.distance(from: lastLocation) < geocodeCacheRadius,
            let cachedName = getCachedLocationName(for: newLocation) {
-            // Use cached name
             locationName = cachedName
         } else {
-            // Reverse geocode to get location name
             geocoder.reverseGeocodeLocation(newLocation) { [weak self] placemarks, error in
-                guard let self = self,
-                      let placemark = placemarks?.first else { return }
+                guard let self = self, let placemark = placemarks?.first else { return }
                 
                 DispatchQueue.main.async {
-                    // Prefer neighborhood, then locality, then administrative area
                     if let neighborhood = placemark.subLocality {
                         self.locationName = neighborhood
                     } else if let city = placemark.locality {
@@ -110,12 +111,9 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
                         self.locationName = ""
                     }
                     
-                    // Cache the result
                     if !self.locationName.isEmpty {
                         self.cacheLocationName(self.locationName, for: newLocation)
                         self.lastGeocodedLocation = newLocation
-                        
-                        // Save location name for offline use
                         UserDefaults.standard.set(self.locationName, forKey: "lastKnownLocationName")
                     }
                 }
@@ -135,7 +133,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        // Silent error handling - errors are handled by checking location status
+        // Silent error handling
     }
     
     // MARK: - Geocoding Cache
@@ -149,9 +147,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         let key = geocodeCacheKey(for: location)
         geocodeCache[key] = name
         
-        // Limit cache size to prevent memory issues
         if geocodeCache.count > 50 {
-            // Remove oldest entries (simple FIFO)
             if let firstKey = geocodeCache.keys.first {
                 geocodeCache.removeValue(forKey: firstKey)
             }
@@ -159,7 +155,6 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
     
     private func geocodeCacheKey(for location: CLLocation) -> String {
-        // Round to ~100m precision for cache key
         let lat = round(location.coordinate.latitude * 1000) / 1000
         let lon = round(location.coordinate.longitude * 1000) / 1000
         return "\(lat),\(lon)"

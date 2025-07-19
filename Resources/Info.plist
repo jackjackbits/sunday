@@ -22,7 +22,7 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>com.jack.sunday</string>
+			<string>com.jh.sunday</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>sunday</string>
@@ -41,8 +41,14 @@
 	<string>Sun Day needs your location to track UV exposure throughout the day</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Sun Day needs your location to determine UV levels at your current position</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>NSUserNotificationCenterUsageDescription</key>
 	<string>Sun Day sends reminders for sunrise, sunset, and solar noon to help you track vitamin D</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiresFullScreen</key>

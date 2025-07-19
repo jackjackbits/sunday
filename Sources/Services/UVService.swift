@@ -140,7 +140,7 @@ class UVService: ObservableObject {
         uvMultiplier = altitudeMultiplier
         
         // Share with widget
-        let sharedDefaults = UserDefaults(suiteName: "group.sunday.widget")
+        let sharedDefaults = UserDefaults(suiteName: "group.jh.sunday.widget")
         sharedDefaults?.set(validAltitude, forKey: "currentAltitude")
         sharedDefaults?.set(altitudeMultiplier, forKey: "uvMultiplier")
         
@@ -220,7 +220,7 @@ class UVService: ObservableObject {
                     } else {
                         // Ensure moon phase is shared with widget
                         if !self.currentMoonPhaseName.isEmpty {
-                            UserDefaults(suiteName: "group.sunday.widget")?.set(self.currentMoonPhaseName, forKey: "moonPhaseName")
+                            UserDefaults(suiteName: "group.jh.sunday.widget")?.set(self.currentMoonPhaseName, forKey: "moonPhaseName")
                             WidgetCenter.shared.reloadAllTimelines()
                         } else {
                             self.fetchMoonPhase(for: location)
@@ -415,7 +415,7 @@ class UVService: ObservableObject {
                 // Set a default moon phase on error
                 DispatchQueue.main.async {
                     self.currentMoonPhaseName = "Waxing Crescent"
-                    UserDefaults(suiteName: "group.sunday.widget")?.set("Waxing Crescent", forKey: "moonPhaseName")
+                    UserDefaults(suiteName: "group.jh.sunday.widget")?.set("Waxing Crescent", forKey: "moonPhaseName")
                     WidgetCenter.shared.reloadAllTimelines()
                 }
                 return 
@@ -440,7 +440,7 @@ class UVService: ObservableObject {
                         if let phaseName = moonData["Phase"] as? String {
                             self.currentMoonPhaseName = phaseName
                             // Share with widget
-                            UserDefaults(suiteName: "group.sunday.widget")?.set(phaseName, forKey: "moonPhaseName")
+                            UserDefaults(suiteName: "group.jh.sunday.widget")?.set(phaseName, forKey: "moonPhaseName")
                             // Trigger widget update
                             WidgetCenter.shared.reloadAllTimelines()
                         }
@@ -454,7 +454,7 @@ class UVService: ObservableObject {
                 // Set a default moon phase on error
                 DispatchQueue.main.async {
                     self.currentMoonPhaseName = "Waxing Crescent"
-                    UserDefaults(suiteName: "group.sunday.widget")?.set("Waxing Crescent", forKey: "moonPhaseName")
+                    UserDefaults(suiteName: "group.jh.sunday.widget")?.set("Waxing Crescent", forKey: "moonPhaseName")
                     WidgetCenter.shared.reloadAllTimelines()
                 }
             }
@@ -557,7 +557,7 @@ class UVService: ObservableObject {
         uvMultiplier = altitudeMultiplier
         
         // Share with widget
-        let sharedDefaults = UserDefaults(suiteName: "group.sunday.widget")
+        let sharedDefaults = UserDefaults(suiteName: "group.jh.sunday.widget")
         sharedDefaults?.set(validAltitude, forKey: "currentAltitude")
         sharedDefaults?.set(altitudeMultiplier, forKey: "uvMultiplier")
         

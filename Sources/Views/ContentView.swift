@@ -84,7 +84,6 @@ struct ContentView: View {
                 }
             }
             
-            // Offline mode indicator as thin bar at bottom
             if uvService.isOfflineMode && !uvService.hasNoData {
                 VStack {
                     Spacer()
@@ -111,11 +110,9 @@ struct ContentView: View {
         .animation(.easeInOut(duration: 0.3), value: uvService.isOfflineMode)
         .onAppear {
             setupApp()
-            // Start timer when view appears
             timerCancellable = timer.autoconnect().sink { _ in
                 updateData()
                 loadTodaysTotal()
-                // Only update gradient if colors actually changed
                 let newColors = gradientColors
                 if newColors != currentGradientColors {
                     currentGradientColors = newColors
@@ -123,35 +120,27 @@ struct ContentView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
-            // Check for updated skin type and adaptation when app returns to foreground
             vitaminDCalculator.setHealthManager(healthManager)
-            // NetworkMonitor will automatically detect when network is restored
         }
         .onChange(of: scenePhase) { _, newPhase in
             switch newPhase {
             case .active:
-                // Resume timer when app becomes active
                 timerCancellable = timer.autoconnect().sink { _ in
                     updateData()
                     loadTodaysTotal()
-                    // Only update gradient if colors actually changed
                     let newColors = gradientColors
                     if newColors != currentGradientColors {
                         currentGradientColors = newColors
                     }
                 }
-                // Also update data immediately when returning to foreground
                 updateData()
                 loadTodaysTotal()
-                // Update gradient immediately when returning to foreground
                 let newColors = gradientColors
                 if newColors != currentGradientColors {
                     currentGradientColors = newColors
                 }
-                // Restart location updates when app becomes active
                 locationManager.startUpdatingLocation()
             case .inactive, .background:
-                // Cancel timer when app goes to background
                 timerCancellable?.cancel()
                 timerCancellable = nil
             @unknown default:
@@ -167,15 +156,12 @@ struct ContentView: View {
             }
         }
         .onChange(of: vitaminDCalculator.clothingLevel) {
-            // Update rate when clothing changes
             vitaminDCalculator.updateUV(uvService.currentUV)
         }
         .onChange(of: vitaminDCalculator.skinType) {
-            // Update rate when skin type changes
             vitaminDCalculator.updateUV(uvService.currentUV)
         }
         .onChange(of: uvService.currentUV) { _, newUV in
-            // Update rate when UV changes
             vitaminDCalculator.updateUV(newUV)
         }
         .onOpenURL { url in
@@ -198,40 +184,28 @@ struct ContentView: View {
         let timeProgress = Double(hour) + Double(minute) / 60.0
         
         if timeProgress < 5 || timeProgress > 22 {
-            // Night (deep dark blue)
             return [Color(hex: "0f1c3d"), Color(hex: "0a1228")]
         } else if timeProgress < 6 {
-            // Pre-dawn (dark blue transitioning)
             return [Color(hex: "1e3a5f"), Color(hex: "2d4a7c")]
         } else if timeProgress < 6.5 {
-            // Early dawn (blue to purple)
             return [Color(hex: "3d5a80"), Color(hex: "5c7cae")]
         } else if timeProgress < 7 {
-            // Dawn (purple to pink)
             return [Color(hex: "5c7cae"), Color(hex: "ee9b7a")]
         } else if timeProgress < 8 {
-            // Sunrise (pink to light blue)
             return [Color(hex: "f4a261"), Color(hex: "87ceeb")]
         } else if timeProgress < 10 {
-            // Morning (clear blue sky)
             return [Color(hex: "5ca9d6"), Color(hex: "87ceeb")]
         } else if timeProgress < 16 {
-            // Midday (bright blue sky)
             return [Color(hex: "4a90e2"), Color(hex: "7bb7e5")]
         } else if timeProgress < 17 {
-            // Late afternoon (slightly warmer blue)
             return [Color(hex: "5ca9d6"), Color(hex: "87b8d4")]
         } else if timeProgress < 18.5 {
-            // Golden hour (warm golden)
             return [Color(hex: "f4a261"), Color(hex: "e76f51")]
         } else if timeProgress < 19.5 {
-            // Sunset (orange to pink)
             return [Color(hex: "e76f51"), Color(hex: "c44569")]
         } else if timeProgress < 20.5 {
-            // Late sunset (pink to purple)
             return [Color(hex: "c44569"), Color(hex: "6a4c93")]
         } else {
-            // Dusk (purple to dark blue)
             return [Color(hex: "6a4c93"), Color(hex: "1e3a5f")]
         }
     }
@@ -318,7 +292,6 @@ struct ContentView: View {
                 }
             }
             
-            // Show cloud/altitude/location info
             VStack(spacing: 2) {
                 HStack(spacing: 15) {
                     HStack(spacing: 5) {
@@ -348,7 +321,6 @@ struct ContentView: View {
                     }
                 }
                 
-                // Location name
                 if !locationManager.locationName.isEmpty {
                     HStack(spacing: 5) {
                         Image(systemName: "location.fill")
@@ -363,8 +335,6 @@ struct ContentView: View {
             }
             .padding(.top, 3)
             
-            
-            // Vitamin D winter warning
             if uvService.isVitaminDWinter {
                 HStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
@@ -394,9 +364,7 @@ struct ContentView: View {
     
     private var exposureToggle: some View {
         HStack(spacing: 12) {
-            // Main tracking button
             Button(action: {
-                // Haptic feedback
                 let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
                 impactFeedback.impactOccurred()
                 
@@ -422,9 +390,7 @@ struct ContentView: View {
             .disabled(uvService.currentUV == 0 && !vitaminDCalculator.isInSun)
             .opacity(uvService.currentUV == 0 && !vitaminDCalculator.isInSun ? 0.6 : 1.0)
             
-            // Manual entry button
             Button(action: {
-                // Haptic feedback
                 let impactFeedback = UIImpactFeedbackGenerator(style: .light)
                 impactFeedback.impactOccurred()
                 
@@ -438,7 +404,7 @@ struct ContentView: View {
                     .background(Color.black.opacity(0.2))
                     .cornerRadius(15)
             }
-            .disabled(vitaminDCalculator.isInSun) // Can't add manual entry while tracking
+            .disabled(vitaminDCalculator.isInSun)
             .opacity(vitaminDCalculator.isInSun ? 0.4 : 1.0)
         }
     }
@@ -627,25 +593,22 @@ struct ContentView: View {
         loadTodaysTotal()
         currentGradientColors = gradientColors
         
-        // Connect services - MUST set modelContext before any UV data fetching
         vitaminDCalculator.setHealthManager(healthManager)
         vitaminDCalculator.setUVService(uvService)
+        vitaminDCalculator.setLocationManager(locationManager)
         uvService.setModelContext(modelContext)
         uvService.setNetworkMonitor(networkMonitor)
         
-        // Fetch UV data on startup
         if let location = locationManager.location {
             uvService.fetchUVData(for: location)
         }
         
-        // Initialize vitamin D rate with current UV (even if 0)
         vitaminDCalculator.updateUV(uvService.currentUV)
         
-        // Ensure moon phase is available for widget
         if uvService.currentMoonPhaseName.isEmpty {
             let defaultPhase = "Waxing Gibbous"
             uvService.currentMoonPhaseName = defaultPhase
-            UserDefaults(suiteName: "group.sunday.widget")?.set(defaultPhase, forKey: "moonPhaseName")
+            UserDefaults(suiteName: "group.jh.sunday.widget")?.set(defaultPhase, forKey: "moonPhaseName")
             WidgetCenter.shared.reloadAllTimelines()
         }
     }
@@ -653,17 +616,11 @@ struct ContentView: View {
     private func updateData() {
         guard let location = locationManager.location else { return }
         
-        // Update UV data every 5 minutes if needed
         let now = Date()
         if now.timeIntervalSince(lastUVUpdate) >= 300 {
             uvService.fetchUVData(for: location)
             lastUVUpdate = now
             UserDefaults.standard.set(now, forKey: "lastUVUpdate")
-            
-            // Stop high-frequency location updates after getting fresh data
-            // Switch to significant location changes for battery efficiency
-            locationManager.stopUpdatingLocation()
-            locationManager.startSignificantLocationChanges()
         }
         
         vitaminDCalculator.updateUV(uvService.currentUV)
@@ -673,11 +630,8 @@ struct ContentView: View {
         if !vitaminDCalculator.isInSun && vitaminDCalculator.sessionVitaminD > 0 {
             let sessionAmount = vitaminDCalculator.sessionVitaminD
             healthManager.saveVitaminD(amount: sessionAmount)
-            // Add the session amount to today's total immediately
             todaysTotal += sessionAmount
-            // Reset the session vitamin D after saving
             vitaminDCalculator.sessionVitaminD = 0.0
-            // Then reload from HealthKit to ensure accuracy
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 loadTodaysTotal()
             }
@@ -708,13 +662,11 @@ struct ContentView: View {
         } else if value < 1000 {
             return "\(Int(value))"
         } else if value < 100000 {
-            // Add comma formatting for readability
             let formatter = NumberFormatter()
             formatter.numberStyle = .decimal
             formatter.maximumFractionDigits = 0
             return formatter.string(from: NSNumber(value: value)) ?? "\(Int(value))"
         } else {
-            // Handle very large numbers with K notation
             return String(format: "%.0fK", value / 1000)
         }
     }
@@ -723,7 +675,6 @@ struct ContentView: View {
         if value < 1000 {
             return "\(Int(value))"
         } else if value < 100000 {
-            // Add comma formatting for readability
             let formatter = NumberFormatter()
             formatter.numberStyle = .decimal
             formatter.maximumFractionDigits = 0
@@ -767,7 +718,6 @@ struct ContentView: View {
         
         switch url.host {
         case "toggle":
-            // Only toggle if UV > 0, matching the main app behavior
             if uvService.currentUV > 0 {
                 vitaminDCalculator.toggleSunExposure(uvIndex: uvService.currentUV)
             }
@@ -777,11 +727,8 @@ struct ContentView: View {
     }
     
     private func moonPhaseIcon() -> String {
-        // Use the phase name from the API to select the correct icon
         let phaseName = uvService.currentMoonPhaseName.lowercased()
         
-        // Map phase names to SF Symbols
-        // Note: Farmsense API has typo "Cresent" instead of "Crescent"
         let icon: String
         if phaseName.contains("new") {
             icon = "moonphase.new.moon"
@@ -800,7 +747,6 @@ struct ContentView: View {
         } else if phaseName.contains("waning") && phaseName.contains("cres") {
             icon = "moonphase.waning.crescent"
         } else {
-            // Fallback based on illumination if phase name doesn't match
             if uvService.currentMoonPhase > 0.85 {
                 icon = "moonphase.full.moon"
             } else {
@@ -826,8 +772,7 @@ struct ContentView: View {
     }
     
     private func contentFitsInScreen(geometry: GeometryProxy) -> Bool {
-        // Estimate content height
-        let estimatedHeight: CGFloat = 40 + 250 + 140 + 70 + 70 + 70 + 40 // header + UV + vitD + button + clothing + skin + padding
+        let estimatedHeight: CGFloat = 40 + 250 + 140 + 70 + 70 + 70 + 40
         let offlineBarHeight: CGFloat = uvService.isOfflineMode ? 50 : 0
         return estimatedHeight + offlineBarHeight < geometry.size.height
     }
@@ -947,12 +892,12 @@ struct SkinTypePicker: View {
     
     private func skinColor(for type: SkinType) -> Color {
         switch type {
-        case .type1: return Color(red: 1.0, green: 0.92, blue: 0.84)      // Very fair
-        case .type2: return Color(red: 0.98, green: 0.87, blue: 0.73)     // Fair
-        case .type3: return Color(red: 0.94, green: 0.78, blue: 0.63)     // Light brown
-        case .type4: return Color(red: 0.82, green: 0.63, blue: 0.48)     // Moderate brown
-        case .type5: return Color(red: 0.63, green: 0.47, blue: 0.36)     // Dark brown
-        case .type6: return Color(red: 0.4, green: 0.26, blue: 0.18)      // Very dark brown
+        case .type1: return Color(red: 1.0, green: 0.92, blue: 0.84)
+        case .type2: return Color(red: 0.98, green: 0.87, blue: 0.73)
+        case .type3: return Color(red: 0.94, green: 0.78, blue: 0.63)
+        case .type4: return Color(red: 0.82, green: 0.63, blue: 0.48)
+        case .type5: return Color(red: 0.63, green: 0.47, blue: 0.36)
+        case .type6: return Color(red: 0.4, green: 0.26, blue: 0.18)
         }
     }
 }
@@ -992,7 +937,6 @@ struct InfoSheet: View {
         NavigationView {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    // About the calculation
                     VStack(alignment: .leading, spacing: 10) {
                         Text("About")
                             .font(.headline)
@@ -1014,7 +958,6 @@ struct InfoSheet: View {
                             .foregroundColor(.blue)
                     }
                     
-                    // Current Calculation Factors
                     VStack(alignment: .leading, spacing: 15) {
                         Text("Current Factors")
                             .font(.headline)
@@ -1073,7 +1016,6 @@ struct InfoSheet: View {
                         .cornerRadius(10)
                     }
                     
-                    // Data sources
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Data Sources")
                             .font(.headline)

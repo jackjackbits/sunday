@@ -25,7 +25,7 @@ struct Provider: IntentTimelineProvider {
         var entries: [SimpleEntry] = []
         
         // Read from shared UserDefaults
-        let sharedDefaults = UserDefaults(suiteName: "group.sunday.widget")
+        let sharedDefaults = UserDefaults(suiteName: "group.jh.sunday.widget")
         let uvIndex = sharedDefaults?.double(forKey: "currentUV") ?? 0.0
         let todaysTotal = sharedDefaults?.double(forKey: "todaysTotal") ?? 0.0
         let isTracking = sharedDefaults?.bool(forKey: "isTracking") ?? false
@@ -453,6 +453,9 @@ struct SundayWidgetBundle: WidgetBundle {
     
     var body: some Widget {
         SundayWidget()
+        if #available(iOS 16.1, *) {
+            LiveActivityWidget()
+        }
     }
 }
 
