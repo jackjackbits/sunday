@@ -29,7 +29,7 @@ class MigrationService(private val context: Context) {
 
         val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(database: SupportSQLiteDatabase) {
-ll                // Agregar tabla de sesiones de vitamina D
+                // Agregar tabla de sesiones de vitamina D
                 database.execSQL("""
                     CREATE TABLE IF NOT EXISTS vitamin_d_session (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,

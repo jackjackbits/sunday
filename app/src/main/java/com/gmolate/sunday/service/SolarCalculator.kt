@@ -85,7 +85,9 @@ class SolarCalculator {
      * Calcula la elevación solar en grados
      */
     fun calculateSolarElevation(location: Location, time: Date = Date()): Double {
-        val calendar = Calendar.getInstance().apply { time = time }
+        val calendar = Calendar.getInstance().apply { 
+            this.time = time 
+        }
         val dayOfYear = calendar.get(Calendar.DAY_OF_YEAR)
         val hour = calendar.get(Calendar.HOUR_OF_DAY) + calendar.get(Calendar.MINUTE) / 60.0
         

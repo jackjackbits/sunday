@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Locale
 
 class SundayWidget : AppWidgetProvider() {
@@ -27,11 +28,11 @@ class SundayWidget : AppWidgetProvider() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val db = AppDatabase.getDatabase(context)
-                val cachedUVData = db.cachedUVDataDao().getLatestData()
+                val cachedUVData = db.cachedUVDataDao().getLatestUvData()
                 val cachedMoonData = db.cachedMoonDataDao().getLatestMoonData()
 
                 appWidgetIds.forEach { appWidgetId ->
-                    val uvIndex = cachedUVData?.currentUV ?: 0.0
+                    val uvIndex = getCurrentUVFromData(cachedUVData)
                     updateAppWidget(context, appWidgetManager, appWidgetId, uvIndex, cachedMoonData, cachedUVData)
                 }
             } catch (e: Exception) {
@@ -89,8 +90,8 @@ class SundayWidget : AppWidgetProvider() {
                 setTextViewText(R.id.widget_label, "UV INDEX")
             } else {
                 moonData?.let { moon ->
-                    setTextViewText(R.id.current_uv, moon.phaseIcon)
-                    setTextViewText(R.id.widget_label, moon.phaseName)
+                    setTextViewText(R.id.current_uv, getMoonIcon(moon.moonPhase))
+                    setTextViewText(R.id.widget_label, getMoonPhaseName(moon.moonPhase))
                 } ?: run {
                     setTextViewText(R.id.current_uv, "🌕")
                     setTextViewText(R.id.widget_label, "Full Moon")
@@ -110,6 +111,43 @@ class SundayWidget : AppWidgetProvider() {
         }
 
         appWidgetManager.updateAppWidget(appWidgetId, views)
+    }
+
+    private fun getMoonPhaseName(phase: Double): String {
+        return when {
+            phase < 0.125 -> "Luna Nueva"
+            phase < 0.25 -> "Cuarto Creciente"
+            phase < 0.375 -> "Creciente Gibosa"
+            phase < 0.5 -> "Luna Llena"
+            phase < 0.625 -> "Menguante Gibosa"
+            phase < 0.75 -> "Cuarto Menguante"
+            phase < 0.875 -> "Menguante"
+            else -> "Luna Nueva"
+        }
+    }
+
+    private fun getMoonIcon(phase: Double): String {
+        return when {
+            phase < 0.125 -> "🌑"
+            phase < 0.25 -> "🌒"
+            phase < 0.375 -> "🌓"
+            phase < 0.5 -> "🌔"
+            phase < 0.625 -> "🌕"
+            phase < 0.75 -> "🌖"
+            phase < 0.875 -> "🌗"
+            else -> "🌘"
+        }
+    }
+
+    private fun getCurrentUVFromData(uvData: CachedUVData?): Double {
+        if (uvData == null || uvData.hourlyUV.isEmpty()) return 0.0
+        
+        val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        return if (currentHour < uvData.hourlyUV.size) {
+            uvData.hourlyUV[currentHour]
+        } else {
+            0.0
+        }
     }
 
     override fun onEnabled(context: Context) {

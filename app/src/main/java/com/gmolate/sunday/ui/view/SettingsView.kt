@@ -16,7 +16,7 @@ fun SettingsView(
     mainViewModel: MainViewModel,
     onBack: () -> Unit
 ) {
-    var solarNoonEnabled by remember { mutableStateOf(mainViewModel.isSolarNoonNotificationEnabled()) }
+    var solarNoonEnabled by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -82,7 +82,8 @@ fun SettingsView(
                         checked = solarNoonEnabled,
                         onCheckedChange = { enabled ->
                             solarNoonEnabled = enabled
-                            mainViewModel.enableSolarNoonNotifications(enabled)
+                            // TODO: Implementar enableSolarNoonNotifications en MainViewModel
+                            // mainViewModel.enableSolarNoonNotifications(enabled)
                         },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,

@@ -115,20 +115,20 @@ class UVService(
 
     private suspend fun processUvData(response: OpenMeteoResponse, location: Location) {
         // Guardar en caché
-        val cachedData = CachedUVData(
+        val processedData = CachedUVData(
             latitude = location.latitude,
             longitude = location.longitude,
             date = Date(),
-            hourlyUV = response.hourly.uv_index,
-            hourlyCloudCover = response.hourly.cloud_cover ?: emptyList(),
+            hourlyUV = response.hourly?.uv_index ?: emptyList(),
+            hourlyCloudCover = response.hourly?.cloud_cover ?: emptyList(),
             maxUV = response.daily.uv_index_max.firstOrNull() ?: 0.0,
-            sunrise = parseTime(response.daily.sunrise.firstOrNull()),
-            sunset = parseTime(response.daily.sunset.firstOrNull()),
+            sunrise = parseTime(response.daily.sunrise.firstOrNull()) ?: Date(),
+            sunset = parseTime(response.daily.sunset.firstOrNull()) ?: Date(),
             lastUpdated = Date()
         )
-
-        db.cachedUVDataDao().insertUvData(cachedData)
-        processUvData(cachedData)
+        
+        db.cachedUVDataDao().insertUvData(processedData)
+        processUvData(processedData)
     }
 
     private fun processUvData(cachedData: CachedUVData) {
@@ -198,19 +198,4 @@ class UVService(
     }
 }
 
-// Data classes para la API de OpenMeteo
-data class OpenMeteoResponse(
-    val hourly: HourlyData,
-    val daily: DailyData
-)
 
-data class HourlyData(
-    val uv_index: List<Double>,
-    val cloud_cover: List<Double>?
-)
-
-data class DailyData(
-    val uv_index_max: List<Double>,
-    val sunrise: List<String>,
-    val sunset: List<String>
-)

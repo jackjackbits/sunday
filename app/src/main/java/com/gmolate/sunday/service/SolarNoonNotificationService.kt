@@ -114,7 +114,9 @@ class SolarNoonNotificationReceiver : BroadcastReceiver() {
                     
                     // Verificar si realmente es un buen momento
                     if (solarCalculator.isOptimalSunExposureTime(location)) {
-                        notificationService.showSolarNoonNotification()
+                        val solarNoon = solarCalculator.calculateSolarNoon(location)
+                        val minutesUntilNoon = ((solarNoon.time - System.currentTimeMillis()) / (1000 * 60)).toInt()
+                        notificationService.showSolarNoonReminder(minutesUntilNoon.coerceAtLeast(0))
                     }
                     
                     // Reprogramar para mañana

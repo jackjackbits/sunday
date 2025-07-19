@@ -80,7 +80,7 @@ class NotificationService(private val context: Context) {
         )
 
         val notification = NotificationCompat.Builder(context, UV_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle("¡Alto índice UV!")
             .setContentText("UV ${String.format("%.1f", uvIndex)} - Usa protección solar")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -103,7 +103,7 @@ class NotificationService(private val context: Context) {
         )
 
         val notification = NotificationCompat.Builder(context, VITAMIN_D_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("Progreso Vitamina D")
             .setContentText("$percentage% del objetivo diario (${String.format("%.0f", currentIU)} IU)")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -125,7 +125,7 @@ class NotificationService(private val context: Context) {
         )
 
         val notification = NotificationCompat.Builder(context, GOAL_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(android.R.drawable.star_on)
             .setContentTitle("¡Objetivo alcanzado!")
             .setContentText("Has completado tu objetivo de $goalType")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -146,7 +146,7 @@ class NotificationService(private val context: Context) {
         )
 
         val notification = NotificationCompat.Builder(context, SOLAR_NOON_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("Mediodía Solar")
             .setContentText("Mejor momento para vitamina D en $minutesUntilNoon minutos")
             .setPriority(NotificationCompat.PRIORITY_LOW)

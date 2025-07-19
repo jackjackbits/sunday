@@ -11,6 +11,9 @@ import com.google.android.gms.tasks.CancellationTokenSource
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import java.util.Locale
 
 class LocationManager(private val context: Context) {
@@ -70,7 +73,7 @@ class LocationManager(private val context: Context) {
 
     fun requestLocation() {
         // Iniciar solicitud de ubicación de forma asíncrona
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             fetchLocation()
         }
     }

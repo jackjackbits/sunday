@@ -45,14 +45,16 @@ class MoonPhaseService(
         _isLoading.value = true
         try {
             val today = dateFormat.format(Date())
-            val cachedData = db.cachedMoonDataDao().getMoonDataForDate(today)
+            val cachedData = db.cachedMoonDataDao().getLatestMoonData()
             
             if (cachedData != null && isDataStillValid(cachedData.lastUpdated)) {
                 updateMoonData(cachedData)
                 return
             }
 
-            val response = api.getMoonPhase(today)
+            // Convertir fecha a timestamp Unix (segundos desde epoch)
+            val todayTimestamp = System.currentTimeMillis() / 1000L
+            val response = api.getMoonPhase(todayTimestamp)
 
             // Guardar en caché
             val moonData = CachedMoonData(
@@ -130,8 +132,7 @@ class MoonPhaseService(
 
     private suspend fun handleError(e: Exception) {
         // Intentar cargar datos del caché aunque sean antiguos
-        val today = dateFormat.format(Date())
-        val cachedData = db.cachedMoonDataDao().getMoonDataForDate(today)
+        val cachedData = db.cachedMoonDataDao().getLatestMoonData()
         if (cachedData != null) {
             updateMoonData(cachedData)
         } else {
