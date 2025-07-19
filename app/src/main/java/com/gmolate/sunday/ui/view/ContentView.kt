@@ -13,10 +13,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign // Importar TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gmolate.sunday.ui.viewmodel.MainViewModel
+
+// Importaciones necesarias para el botón de configuración y el Dialog
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.ui.window.Dialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,39 +33,57 @@ fun ContentView(viewModel: MainViewModel) {
     val healthData by viewModel.healthData.collectAsState()
     val vitaminDProgress by viewModel.vitaminDProgress.collectAsState()
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        Column(
+    // Estado para controlar la visibilidad de la pantalla de configuración
+    var showSettingsView by remember { mutableStateOf(false) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Sunday") }, // Título de la app
+                actions = {
+                    // Botón de configuración en la barra superior
+                    IconButton(onClick = { showSettingsView = true }) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Configuración")
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(paddingValues), // Importante para que el contenido no se solape con el TopAppBar
+            color = MaterialTheme.colorScheme.background
         ) {
-            // Estado offline
-            if (isOfflineMode) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
-                ) {
-                    Text(
-                        text = "Modo Sin Conexión",
-                        modifier = Modifier.padding(12.dp),
-                        color = MaterialTheme.colorScheme.onErrorContainer
-                    )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Estado offline
+                if (isOfflineMode) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                    ) {
+                        Text(
+                            text = "Modo Sin Conexión",
+                            modifier = Modifier.padding(12.dp),
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
                 }
-            }
 
-            // Mostrar errores
-            error?.let { errorMessage ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp),
+                // Mostrar errores
+                error?.let { errorMessage ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
                 ) {
                     Text(
@@ -71,15 +93,6 @@ fun ContentView(viewModel: MainViewModel) {
                     )
                 }
             }
-
-            // Cita Diaria (nueva sección)
-            // TODO: Obtener la cita real de una fuente de datos, quizás del ViewModel
-            val currentQuoteText = "La vida es como una bicicleta, para mantener el equilibrio tienes que seguir adelante."
-            val currentQuoteAuthor = "Albert Einstein"
-
-            DailyQuoteCard(quote = currentQuoteText, author = currentQuoteAuthor)
-
-            Spacer(modifier = Modifier.height(16.dp)) // Espacio entre la cita y el contenido principal
 
             // Título principal
             Text(
@@ -122,7 +135,7 @@ fun ContentView(viewModel: MainViewModel) {
                     AnimatedVisibility(
                         visible = currentUv <= 0,
                         enter = fadeIn(animationSpec = tween(600)) + slideInVertically(),
-                        exit = fadeOut(animationSpec = tween(600)) + slideOutVertically()
+                        exit = fadeOut(animationSpec = tween(600)) + slideInVertically()
                     ) {
                         Text(
                             text = getMoonPhaseDescription(moonPhase),
@@ -180,34 +193,13 @@ fun ContentView(viewModel: MainViewModel) {
             }
         }
     }
-}
 
-@Composable
-fun DailyQuoteCard(quote: String, author: String) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = quote,
-                style = MaterialTheme.typography.headlineSmall, // Ajustado para no ser demasiado grande
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-            Text(
-                text = "- $author",
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-            )
+    // Diálogo para mostrar la pantalla de configuración
+    if (showSettingsView) {
+        Dialog(onDismissRequest = { showSettingsView = false }) {
+            // Asegúrate de que SettingsView esté en el paquete correcto o impórtalo
+            // Por ejemplo: com.gmolate.sunday.ui.view.SettingsView
+            SettingsView(Modifier.fillMaxSize())
         }
     }
 }
@@ -331,3 +323,4 @@ private fun getMoonPhaseDescription(phase: Double): String {
         else -> "Luna Nueva"
     }
 }
+"}}}

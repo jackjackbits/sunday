@@ -44,7 +44,6 @@ This Android version achieves **100% feature parity** with the original iOS app 
 | **Development Tools** | ✅ | ✅ | Enhanced | Phase 3 |
 | Debug Diagnostics | Basic Logging | DiagnosticService.kt | ✅ Enhanced | Phase 3 |
 | Migration System | Core Data Migration | Room Migration + MigrationService | ✅ Enhanced | Phase 3 |
-| **Daily Quote Integration** | ✅ | ✅ | In Progress | Phase 4 (Nueva) |
 
 ### 🚀 Android-Specific Enhancements
 
@@ -91,7 +90,7 @@ Beyond iOS parity, the Android version includes platform-specific improvements:
 The app requires the following permissions:
 - **Location Access**: Precise location for UV index and solar calculations
 - **Google Fit**: Health data integration for vitamin D tracking
-- **Notifications**: Solar timing alerts and UV warnings, and **Daily Quote Notifications**
+- **Notifications**: Solar timing alerts and UV warnings
 - **Internet**: Weather data and API communication
 - **Background Processing**: Widget updates and scheduled notifications
 
@@ -140,14 +139,12 @@ app/src/main/java/com/gmolate/sunday/
 │   ├── MoonPhaseService.kt       # Moon phase management
 │   ├── SolarCalculator.kt        # Solar timing calculations
 │   ├── NotificationService.kt    # Notification management (Original)
-│   ├── DailyQuoteNotificationService.kt # Daily Quote Notification Service (Nuevo)
 │   ├── MigrationService.kt       # Data migration
 │   └── DiagnosticService.kt      # Development diagnostics
 ├── ui/                           # User interface
 │   ├── view/
 │   │   ├── ContentView.kt        # Main app screen
 │   │   └── SettingsView.kt       # Settings screen (Original)
-│   │   └── SettingsScreen.kt     # Settings Screen (Nueva)
 │   └── viewmodel/
 │       └── MainViewModel.kt      # State management
 └── widget/
@@ -180,18 +177,15 @@ Test the home screen widget functionality by:
 - **Smart notifications** for optimal sun exposure timing
 - **Comprehensive settings** for personalization
 - **Offline mode** with intelligent data caching
-- **Daily motivational quotes** for inspiration
 
 ### Home Screen Widget
 - **Dynamic display** switching between UV index and moon phases
 - **Automatic day/night detection** based on solar calculations
 - **Error-resistant updates** with graceful fallback states
 - **Material Design 3** styling with system theme integration
-- **Optional Daily Quote display** within the widget
 
 ### Background Services
 - **Solar noon notifications** calculated for precise location
-- **Daily motivational quote notifications** at a user-defined time
 - **Automatic data updates** with network monitoring
 - **Battery optimization** through intelligent scheduling
 - **Migration support** for seamless app updates
@@ -204,45 +198,12 @@ Test the home screen widget functionality by:
 3. Write unit tests for new features
 4. Update documentation for significant changes
 
-### Guía de Contribución
-¡Gracias por tu interés en contribuir a Sunday Android! Sigue estos pasos para comenzar:
-
-1.  **Fork el Repositorio:** Comienza haciendo un fork del repositorio `gmolate/sunday---Android` en tu cuenta de GitHub.
-2.  **Clona tu Fork:** Clona tu repositorio forkeado a tu máquina local.
-    ```bash
-    git clone https://github.com/tu-usuario/sunday---Android.git
-    cd sunday---Android
-    ```
-3.  **Crea una Nueva Rama:** Crea una nueva rama para tus cambios. El nombre de la rama debe ser descriptivo (ej. `feature/nombre-de-la-feature`, `bugfix/descripcion-del-bug`).
-    ```bash
-    git checkout -b feature/nombre-de-la-feature
-    ```
-4.  **Realiza tus Cambios:** Implementa tus mejoras o correcciones. Asegúrate de seguir las pautas de codificación de Kotlin y las mejores prácticas de Android.
-5.  **Pruebas:** Escribe o actualiza las pruebas unitarias y de integración para tus cambios.
-    ```bash
-    ./gradlew test
-    ./gradlew connectedAndroidTest
-    ```
-6.  **Confirma tus Cambios:** Asegúrate de que tus mensajes de commit sean claros y descriptivos.
-    ```bash
-    git add .
-    git commit -m "feat: Añadir nueva funcionalidad X" # O "fix: Corregir bug Y"
-    ```
-7.  **Sincroniza tu Rama:** Antes de crear un Pull Request, asegúrate de que tu rama esté actualizada con la rama `main` del repositorio original.
-    ```bash
-    git fetch upstream
-    git rebase upstream/main
-    ```
-8.  **Crea un Pull Request:** Envía tus cambios abriendo un Pull Request desde tu rama a la rama `main` del repositorio `gmolate/sunday---Android`. Proporciona una descripción clara de tus cambios y referencia cualquier issue relevante.
-
-### Convenciones de Commits (Ejemplo)
-
-Utilizamos las [Convenciones de Commits Convencionales](https://www.conventionalcommits.org/en/v1.0.0/) para nuestros mensajes de commit. Algunos ejemplos:
-
--   `feat: añadir pantalla de configuración de notificaciones`
--   `fix: corregir cálculo de fase lunar`
--   `docs: actualizar guía de contribución en README`
--   `refactor: mejorar la inyección de dependencias`
+### Issue Reporting
+When reporting issues, include:
+- Android version and device model
+- Steps to reproduce the issue
+- Expected vs actual behavior
+- Screenshots if applicable
 
 ## 📄 License
 

@@ -12,8 +12,6 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
-    <!-- Permiso para que la app se inicie al arrancar el dispositivo, importante para reprogramar alarmas de citas -->
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- Permisos para Google Fit -->
     <uses-permission android:name="android.permission.FITNESS_LOCATION_READ"/>
@@ -36,14 +34,14 @@
         tools:targetApi="31">
 
         <activity
-            android:name="com.gmolate.sunday.ui.MainActivity"
-            android:exported="true"
-            android:theme="@style/Theme.Sunday">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+        android:name="com.gmolate.sunday.ui.MainActivity"
+        android:exported="true"
+        android:theme="@style/Theme.App.Starting"> <!-- ¡Cambio aquí! -->
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+    	</activity>
 
         <receiver android:name=".widget.SundayWidget"
             android:exported="false">
@@ -59,16 +57,6 @@
             android:exported="false">
             <intent-filter>
                 <action android:name="com.gmolate.sunday.SOLAR_NOON_NOTIFICATION" />
-            </intent-filter>
-        </receiver>
-
-        <!-- Nuevo receiver para las notificaciones de citas diarias -->
-        <receiver android:name=".service.DailyQuoteNotificationReceiver"
-            android:enabled="true"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="${applicationId}.ACTION_DAILY_QUOTE_NOTIFICATION" />
-                <action android:name="android.intent.action.BOOT_COMPLETED"/>
             </intent-filter>
         </receiver>
 
