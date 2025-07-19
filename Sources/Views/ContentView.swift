@@ -80,7 +80,6 @@ struct ContentView: View {
                         .frame(maxWidth: .infinity, minHeight: geometry.size.height)
                         .frame(width: geometry.size.width)
                     }
-                    .scrollDisabled(contentFitsInScreen(geometry: geometry))
                 }
             }
             
@@ -823,13 +822,6 @@ struct ContentView: View {
                 return "\(hours)h \(remainingMinutes)m"
             }
         }
-    }
-    
-    private func contentFitsInScreen(geometry: GeometryProxy) -> Bool {
-        // Estimate content height
-        let estimatedHeight: CGFloat = 40 + 250 + 140 + 70 + 70 + 70 + 40 // header + UV + vitD + button + clothing + skin + padding
-        let offlineBarHeight: CGFloat = uvService.isOfflineMode ? 50 : 0
-        return estimatedHeight + offlineBarHeight < geometry.size.height
     }
 }
 
