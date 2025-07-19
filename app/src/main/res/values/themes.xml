@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Tema principal de tu aplicación -->
+    <style name="Theme.Sunday" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Estilo para el contenedor de los Widgets de la aplicación -->
+    <!-- Esto asegura que el fondo del widget sea transparente y se alinee con el diseño -->
+    <style name="Theme.Sunday.AppWidgetContainer" parent="android:Theme.DeviceDefault.DayNight">
+        <!-- El fondo del widget debe ser transparente para que el drawable que le asignes se vea -->
+        <item name="android:colorBackground">@android:color/transparent</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowIsTranslucent">true</item>
+    </style>
+
+    <!-- Tema para el Splash Screen (para Android 12+ API) -->
+    <!-- Este estilo es el que tu MainActivity usa para la pantalla de inicio -->
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <!-- Establece el fondo del splash screen. Usamos negro directo. -->
+        <item name="windowSplashScreenBackground">#000000</item> 
+        <!-- Establece el icono del splash screen. Usa tu icono de launcher redondo. -->
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_round</item> 
+        <!-- Duración mínima de la animación del splash screen en milisegundos -->
+        <item name="windowSplashScreenAnimationDuration">1000</item> 
+        <!-- El tema normal de la aplicación que se aplicará después del splash -->
+        <item name="postSplashScreenTheme">@style/Theme.Sunday</item>
+    </style>
+
+</resources>
