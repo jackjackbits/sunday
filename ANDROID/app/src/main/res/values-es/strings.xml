@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SundayAndroidApp</string>
+    <string name="uv_index_label">Índice UV</string>
+    <string name="burn_limit_template">%d min límite de quemadura</string>
+    <string name="sunrise_template">Amanecer %s</string>
+    <string name="sunset_template">Atardecer %s</string>
+    <string name="max_uv_template">Max UV %1$.1f @ %2$s</string>
+    <string name="clouds_altitude_template">%1$d%% nubes   %2$dm (+%3$.0f%% UV)</string>
+    <string name="select_skin_type">Selecciona tu tipo de piel</string>
+    <string name="skin_type_template">Tipo %d:</string>
+    <string name="skin_type_1_desc">Muy clara, Siempre se quema, nunca se broncea</string>
+    <string name="skin_type_2_desc">Clara, Usualmente se quema, se broncea mínimamente</string>
+    <string name="skin_type_3_desc">Clara, A veces se quema, se broncea uniformemente</string>
+    <string name="skin_type_4_desc">Media, Se quema mínimamente, se broncea bien</string>
+    <string name="skin_type_5_desc">Oscura, Raramente se quema, se broncea profusamente</string>
+    <string name="skin_type_6_desc">Muy oscura, Nunca se quema, pigmentación profunda</string>
+    <string name="select_clothing_level">Selecciona tu nivel de ropa</string>
+    <string name="clothing_nude">¡Desnudo!</string>
+    <string name="clothing_minimal">Mínimo (traje de baño)</string>
+    <string name="clothing_light">Ligero (pantalones cortos y camiseta)</string>
+    <string name="clothing_moderate">Moderado (mangas largas)</string>
+    <string name="clothing_heavy">Pesado (completamente cubierto)</string>
+    <string name="welcome_message">¡Bienvenido a Sunday!</string>
+    <string name="rate_label">tasa</string>
+    <string name="session_label">sesión</string>
+    <string name="today_label">hoy</string>
+    <string name="start_button">Iniciar</string>
+    <string name="stop_button">Parar</string>
+    <string name="iu_per_min_template">%d UI/min</string>
+    <string name="iu_template">%d UI</string>
+    <string name="start_tracking">Empezar a seguir</string>
+    <string name="stop_tracking">Parar seguimiento</string>
+</resources>

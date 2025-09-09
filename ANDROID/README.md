@@ -1,7 +1,3 @@
-[📖 Read the detailed methodology](METHODOLOGY.md) | [🔒 Privacy Policy](PRIVACY.md)
-
-<img height="500" alt="SunDay_1290x2796_v2" src="https://github.com/user-attachments/assets/b712cc98-1cc5-4e6f-8297-cabf8f801013" />
-
 # Sunday - Android Version
 
 This is the Android version of [Sunday](https://github.com/jackjackbits/sunday), a powerful application for tracking UV exposure and Vitamin D generation, rebuilt from the ground up in Kotlin for the Android platform.

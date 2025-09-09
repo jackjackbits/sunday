@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SundayAndroidApp</string>
+    <string name="uv_index_label">UV Index</string>
+    <string name="burn_limit_template">%d min burn limit</string>
+    <string name="sunrise_template">Sunrise %s</string>
+    <string name="sunset_template">Sunset %s</string>
+    <string name="max_uv_template">Max UV %1$.1f @ %2$s</string>
+    <string name="clouds_altitude_template">%1$d%% clouds ↑ %2$dm (+%3$.0f%% UV)</string>
+    <string name="select_skin_type">Select your skin type</string>
+    <string name="skin_type_template">Type %d:</string>
+    <string name="skin_type_1_desc">Very fair, Always burns, never tans</string>
+    <string name="skin_type_2_desc">Fair, Usually burns, tans minimally</string>
+    <string name="skin_type_3_desc">Light, Sometimes burns, tans uniformly</string>
+    <string name="skin_type_4_desc">Medium, Burns minimally, tans well</string>
+    <string name="skin_type_5_desc">Dark, Rarely burns, tans profusely</string>
+    <string name="skin_type_6_desc">Very dark, Never burns, deeply pigmented</string>
+    <string name="select_clothing_level">Select your clothing level</string>
+    <string name="clothing_nude">Nude!</string>
+    <string name="clothing_minimal">Minimal (swimwear)</string>
+    <string name="clothing_light">Light (shorts &amp; t-shirt)</string>
+    <string name="clothing_moderate">Moderate (long sleeves)</string>
+    <string name="clothing_heavy">Heavy (fully covered)</string>
+    <string name="welcome_message">Welcome to Sunday!</string>
+    <string name="rate_label">rate</string>
+    <string name="session_label">session</string>
+    <string name="today_label">today</string>
+    <string name="start_button">Start</string>
+    <string name="stop_button">Stop</string>
+    <string name="start_tracking">Start Tracking</string>
+    <string name="stop_tracking">Stop Tracking</string>
+    <string name="iu_per_min_template">%d IU/min</string>
+    <string name="iu_template">%d IU</string>
+</resources>
