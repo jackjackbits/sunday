@@ -9,6 +9,9 @@ extension Array {
 
 extension Calendar {
     func isDateInTomorrow(_ date: Date) -> Bool {
-        return isDate(date, inSameDayAs: Date().addingTimeInterval(86400))
+        guard let tomorrow = Self.current.date(byAdding: DateComponents(day: 1), to: Date()) else {
+            return false
+        }
+        return isDate(date, inSameDayAs: tomorrow)
     }
 }
