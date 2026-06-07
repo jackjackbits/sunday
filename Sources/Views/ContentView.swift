@@ -21,6 +21,7 @@ struct ContentView: View {
     @State private var todaysTotal: Double = 0
     @State private var currentGradientColors: [Color] = []
     @State private var showInfoSheet = false
+    @State private var showHistorySheet = false
     @State private var showManualExposureSheet = false
     @State private var showSessionCompletionSheet = false
     @State private var pendingSessionStartTime: Date?
@@ -280,11 +281,21 @@ struct ContentView: View {
     }
     
     private var headerSection: some View {
-        Button(action: { showInfoSheet = true }) {
-            Text("SUN DAY")
-                .font(.system(size: 40, weight: .bold, design: .rounded))
-                .foregroundColor(.white)
-                .tracking(2)
+        ZStack {
+            Button(action: { showInfoSheet = true }) {
+                Text("SUN DAY")
+                    .font(.system(size: 40, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                    .tracking(2)
+            }
+            HStack {
+                Spacer()
+                Button(action: { showHistorySheet = true }) {
+                    Image(systemName: "chart.bar.fill")
+                        .font(.system(size: 22))
+                        .foregroundColor(.white.opacity(0.85))
+                }
+            }
         }
     }
     
@@ -607,6 +618,10 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showSkinTypePicker) {
             SkinTypePicker(selection: $vitaminDCalculator.skinType)
+        }
+        .sheet(isPresented: $showHistorySheet) {
+            HistoryView()
+                .environmentObject(healthManager)
         }
         .sheet(isPresented: $showInfoSheet) {
             InfoSheet()
