@@ -15,6 +15,8 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     
+    @AppStorage("usesMCG") private var usesMCG: Bool = false
+
     @State private var showClothingPicker = false
     @State private var showSunscreenPicker = false
     @State private var showSkinTypePicker = false
@@ -98,7 +100,10 @@ struct ContentView: View {
                                 clothingSection
                                 sunscreenSection
                             }
-                            skinTypeSection
+                            HStack(spacing: 12) {
+                                skinTypeSection
+                                unitsSection
+                            }
                         }
                         .padding(.horizontal, 20)
                         .padding(.vertical, 20)
@@ -654,6 +659,35 @@ struct ContentView: View {
         }
     }
     
+    private var unitLabel: String { usesMCG ? "mcg" : "IU" }
+
+    private func convertUnit(_ iu: Double) -> Double {
+        usesMCG ? iu / 40.0 : iu
+    }
+
+    private var unitsSection: some View {
+        Button(action: { usesMCG.toggle() }) {
+            VStack(spacing: 10) {
+                Text("UNITS")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.white.opacity(0.7))
+                    .tracking(1.5)
+
+                HStack(spacing: 6) {
+                    Text(usesMCG ? "mcg" : "IU")
+                        .font(.system(size: 16, weight: .medium))
+                    Image(systemName: "arrow.up.arrow.down")
+                        .font(.system(size: 12))
+                }
+                .foregroundColor(.white)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 15)
+            .background(Color.black.opacity(0.2))
+            .cornerRadius(15)
+        }
+    }
+
     private var vitaminDSection: some View {
         VStack(spacing: 15) {
             HStack(alignment: .top, spacing: 15) {
@@ -673,14 +707,14 @@ struct ContentView: View {
                     }
                     .frame(height: 12)
                     
-                    Text(formatVitaminDNumber(vitaminDCalculator.currentVitaminDRate / 60.0))
+                    Text(formatVitaminDNumber(convertUnit(vitaminDCalculator.currentVitaminDRate / 60.0)))
                         .font(.system(size: 26, weight: .bold))
                         .foregroundColor(.white)
                         .monospacedDigit()
                         .frame(minWidth: 80)
                         .frame(height: 34)
-                    
-                    Text("IU/min")
+
+                    Text("\(unitLabel)/min")
                         .font(.system(size: 12))
                         .foregroundColor(.white.opacity(0.6))
                         .frame(height: 16)
@@ -695,16 +729,16 @@ struct ContentView: View {
                         .frame(height: 12)
                     
                     HStack(spacing: 4) {
-                        Text(formatVitaminDNumber(vitaminDCalculator.sessionVitaminD))
+                        Text(formatVitaminDNumber(convertUnit(vitaminDCalculator.sessionVitaminD)))
                             .font(.system(size: 26, weight: .bold))
                             .foregroundColor(.white)
                             .monospacedDigit()
                             .frame(minWidth: 80, alignment: .trailing)
-                        
-                        Text("IU")
+
+                        Text(unitLabel)
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.white.opacity(0.8))
-                            .frame(width: 20, alignment: .leading)
+                            .frame(width: 30, alignment: .leading)
                     }
                     .frame(height: 34)
                     
@@ -731,14 +765,14 @@ struct ContentView: View {
                         .tracking(1.2)
                         .frame(height: 12)
                     
-                    Text(formatTodaysTotal(todaysTotal + vitaminDCalculator.sessionVitaminD))
+                    Text(formatTodaysTotal(convertUnit(todaysTotal + vitaminDCalculator.sessionVitaminD)))
                         .font(.system(size: 26, weight: .bold))
                         .foregroundColor(.white)
                         .monospacedDigit()
                         .frame(minWidth: 80)
                         .frame(height: 34)
-                    
-                    Text("IU total")
+
+                    Text("\(unitLabel) total")
                         .font(.system(size: 12))
                         .foregroundColor(.white.opacity(0.6))
                         .frame(height: 16)
