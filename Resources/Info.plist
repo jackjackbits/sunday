@@ -17,7 +17,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.1.2</string>
+	<string>1.0</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -53,18 +53,5 @@
 	</array>
 	<key>UIUserInterfaceStyle</key>
 	<string>Light</string>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSExceptionDomains</key>
-		<dict>
-			<key>api.farmsense.net</key>
-			<dict>
-				<key>NSExceptionAllowsInsecureHTTPLoads</key>
-				<true/>
-				<key>NSIncludesSubdomains</key>
-				<false/>
-			</dict>
-		</dict>
-	</dict>
 </dict>
 </plist>
