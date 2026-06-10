@@ -15,6 +15,7 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     
+    @State private var showCloudOverridePicker = false
     @State private var showClothingPicker = false
     @State private var showSunscreenPicker = false
     @State private var showSkinTypePicker = false
@@ -387,18 +388,30 @@ struct ContentView: View {
             // Show cloud/altitude/location info
             VStack(spacing: 2) {
                 HStack(spacing: 15) {
-                    HStack(spacing: 5) {
-                        Image(systemName: uvService.currentUV == 0 ? 
-                                         (uvService.currentCloudCover < 70 ? moonPhaseIcon() : "cloud.fill") :
-                                         uvService.currentCloudCover == 0 ? "sun.max" : 
-                                         uvService.currentCloudCover > 50 ? "cloud.fill" : "cloud")
-                            .font(.system(size: 10))
-                            .foregroundColor(.white.opacity(0.6))
-                        Text("\(Int(uvService.currentCloudCover))% clouds")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.white.opacity(0.6))
+                    // Tappable cloud cover — tap to manually override
+                    Button(action: { showCloudOverridePicker = true }) {
+                        HStack(spacing: 5) {
+                            Image(systemName: uvService.currentUV == 0 ?
+                                             (uvService.currentCloudCover < 70 ? moonPhaseIcon() : "cloud.fill") :
+                                             uvService.currentCloudCover == 0 ? "sun.max" :
+                                             uvService.currentCloudCover > 50 ? "cloud.fill" : "cloud")
+                                .font(.system(size: 10))
+                                .foregroundColor(uvService.cloudCoverOverride != nil ? .yellow.opacity(0.9) : .white.opacity(0.6))
+                            Text("\(Int(uvService.currentCloudCover))% clouds")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(uvService.cloudCoverOverride != nil ? .yellow.opacity(0.9) : .white.opacity(0.6))
+                            if uvService.cloudCoverOverride != nil {
+                                Image(systemName: "pencil")
+                                    .font(.system(size: 9))
+                                    .foregroundColor(.yellow.opacity(0.9))
+                            }
+                        }
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 4)
+                        .contentShape(Rectangle())
                     }
-                    
+                    .buttonStyle(.plain)
+
                     if uvService.currentAltitude > 100 {
                         HStack(spacing: 5) {
                             Image(systemName: "arrow.up.to.line")
@@ -428,8 +441,21 @@ struct ContentView: View {
                 }
             }
             .padding(.top, 3)
-            
-            
+            .confirmationDialog("Override Cloud Cover", isPresented: $showCloudOverridePicker, titleVisibility: .visible) {
+                Button("☀️  0% — Clear sky")         { uvService.applyCloudOverride(0) }
+                Button("🌤  25% — Mostly sunny")     { uvService.applyCloudOverride(25) }
+                Button("⛅️  50% — Partly cloudy")    { uvService.applyCloudOverride(50) }
+                Button("🌥  75% — Mostly cloudy")    { uvService.applyCloudOverride(75) }
+                Button("🌧  100% — Overcast / rain") { uvService.applyCloudOverride(100) }
+                if uvService.cloudCoverOverride != nil {
+                    Button("↩ Reset to weather data", role: .destructive) { uvService.clearCloudOverride() }
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Select actual conditions to fine-tune UV calculation")
+            }
+
+
             // Vitamin D winter warning
             if uvService.isVitaminDWinter {
                 HStack(spacing: 8) {
