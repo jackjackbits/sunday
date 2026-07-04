@@ -8,6 +8,7 @@ struct ManualExposureSheet: View {
     @EnvironmentObject var locationManager: LocationManager
     @EnvironmentObject var healthManager: HealthManager
     
+    @State private var sessionDate: Date = Calendar.current.startOfDay(for: Date())
     @State private var startTime = Date()
     @State private var endTime = Date()
     @State private var selectedClothing: ClothingLevel = .light
@@ -18,19 +19,41 @@ struct ManualExposureSheet: View {
     @State private var calculatedVitaminD: Double = 0
     @State private var errorMessage: String?
     @State private var uvDataPoints: [(time: Date, uv: Double)] = []
-    
+
     private let calendar = Calendar.current
-    
-    // Time range limits - only allow today's past times
-    private var timeRange: ClosedRange<Date> {
-        let now = Date()
-        let startOfDay = calendar.startOfDay(for: now)
-        return startOfDay...now
+
+    private var dateRange: ClosedRange<Date> {
+        let sevenDaysAgo = calendar.date(byAdding: .day, value: -7, to: calendar.startOfDay(for: Date()))!
+        return sevenDaysAgo...Date()
     }
+
+    private var startTimeRange: ClosedRange<Date> {
+        let dayStart = calendar.startOfDay(for: sessionDate)
+        let dayEnd = calendar.isDateInToday(sessionDate) ? Date() : calendar.date(byAdding: .day, value: 1, to: dayStart)!.addingTimeInterval(-60)
+        return dayStart...dayEnd
+    }
+
+    private var endTimeRange: ClosedRange<Date> {
+        let dayEnd = calendar.isDateInToday(sessionDate) ? Date() : calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: sessionDate))!.addingTimeInterval(-60)
+        let clampedStart = min(startTime, dayEnd)
+        return clampedStart...dayEnd
+    }
+
+    /// Combines the selected day (sessionDate) with the hour/minute from a time picker value.
+    private func combineDateAndTime(date: Date, time: Date) -> Date {
+        var comps = calendar.dateComponents([.hour, .minute], from: time)
+        comps.year  = calendar.component(.year,  from: date)
+        comps.month = calendar.component(.month, from: date)
+        comps.day   = calendar.component(.day,   from: date)
+        return calendar.date(from: comps) ?? time
+    }
+
+    private var effectiveStartTime: Date { combineDateAndTime(date: sessionDate, time: startTime) }
+    private var effectiveEndTime:   Date { combineDateAndTime(date: sessionDate, time: endTime) }
     
     private var formattedDuration: String {
-        guard endTime > startTime else { return "--" }
-        let minutes = Int(endTime.timeIntervalSince(startTime) / 60)
+        guard effectiveEndTime > effectiveStartTime else { return "--" }
+        let minutes = Int(effectiveEndTime.timeIntervalSince(effectiveStartTime) / 60)
         if minutes < 60 { return "\(minutes) min" }
         let hours = minutes / 60
         let remaining = minutes % 60
@@ -69,42 +92,62 @@ struct ManualExposureSheet: View {
                             .padding(.top, 10)
                     }
                     
-                    // Time selection
+                    // Date + time selection
                     VStack(spacing: 16) {
+                        // Date picker
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("DATE")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.white.opacity(0.6))
+                                .tracking(1.2)
+                            DatePicker("", selection: $sessionDate, in: dateRange, displayedComponents: [.date])
+                                .datePickerStyle(.wheel)
+                                .labelsHidden()
+                                .colorScheme(.dark)
+                                .frame(height: 100)
+                                .onChange(of: sessionDate) { _, newDate in
+                                    // Clamp start/end into valid range for new date
+                                    let dayStart = calendar.startOfDay(for: newDate)
+                                    let isToday = calendar.isDateInToday(newDate)
+                                    let dayEnd = isToday ? Date() : calendar.date(byAdding: .day, value: 1, to: dayStart)!.addingTimeInterval(-60)
+                                    startTime = min(max(startTime, dayStart), dayEnd.addingTimeInterval(-300))
+                                    endTime   = min(max(endTime,   startTime.addingTimeInterval(300)), dayEnd)
+                                    calculateVitaminD()
+                                }
+                        }
+
                         // Start time
                         VStack(alignment: .leading, spacing: 8) {
                             Text("START TIME")
                                 .font(.system(size: 10, weight: .bold))
                                 .foregroundColor(.white.opacity(0.6))
                                 .tracking(1.2)
-                            
-                            DatePicker("", selection: $startTime, in: timeRange, displayedComponents: [.hourAndMinute])
+                            DatePicker("", selection: $startTime, in: startTimeRange, displayedComponents: [.hourAndMinute])
                                 .datePickerStyle(.wheel)
                                 .labelsHidden()
                                 .colorScheme(.dark)
+                                .frame(height: 100)
                                 .onChange(of: startTime) { _, newValue in
-                                    // Ensure end time is after start time
                                     if endTime <= newValue {
-                                        endTime = min(newValue.addingTimeInterval(300), Date()) // Add 5 minutes
+                                        let range = endTimeRange
+                                        endTime = min(newValue.addingTimeInterval(300), range.upperBound)
                                     }
-                                    // Recalculate vitamin D
                                     calculateVitaminD()
                                 }
                         }
-                        
+
                         // End time
                         VStack(alignment: .leading, spacing: 8) {
                             Text("END TIME")
                                 .font(.system(size: 10, weight: .bold))
                                 .foregroundColor(.white.opacity(0.6))
                                 .tracking(1.2)
-                            
-                            DatePicker("", selection: $endTime, in: startTime...Date(), displayedComponents: [.hourAndMinute])
+                            DatePicker("", selection: $endTime, in: endTimeRange, displayedComponents: [.hourAndMinute])
                                 .datePickerStyle(.wheel)
                                 .labelsHidden()
                                 .colorScheme(.dark)
+                                .frame(height: 100)
                                 .onChange(of: endTime) { _, _ in
-                                    // Recalculate vitamin D
                                     calculateVitaminD()
                                 }
                         }
@@ -286,12 +329,10 @@ struct ManualExposureSheet: View {
         .presentationDragIndicator(.visible)
         .presentationBackground(.clear)
         .onAppear {
-            // Set default times - 1 hour ago to now
             let now = Date()
-            startTime = now.addingTimeInterval(-3600) // 1 hour ago
-            endTime = now
-            
-            // Calculate initial vitamin D
+            sessionDate = calendar.startOfDay(for: now)
+            startTime   = now.addingTimeInterval(-3600) // 1 hour ago
+            endTime     = now
             calculateVitaminD()
         }
     }
@@ -307,10 +348,12 @@ struct ManualExposureSheet: View {
             isCalculating = false
             return
         }
-        
+
+        let start = effectiveStartTime
+        let end   = effectiveEndTime
+
         Task {
-            // Fetch historical UV data for today
-            let historicalUV = await fetchHistoricalUV(for: location, from: startTime, to: endTime)
+            let historicalUV = await fetchHistoricalUV(for: location, from: start, to: end)
             
             await MainActor.run {
                 guard !historicalUV.isEmpty else {
@@ -335,7 +378,7 @@ struct ManualExposureSheet: View {
                     if i < historicalUV.count - 1 {
                         intervalEnd = historicalUV[i + 1].time
                     } else {
-                        intervalEnd = endTime
+                        intervalEnd = end
                     }
                     
                     let duration = intervalEnd.timeIntervalSince(intervalStart) / 60.0 // minutes
@@ -439,9 +482,9 @@ struct ManualExposureSheet: View {
     }
     
     private func saveToHealth() {
-        // Save to Health with completion to ensure caches refresh
         let amount = calculatedVitaminD
-        healthManager.saveVitaminD(amount: amount) { _ in
+        let date   = effectiveStartTime
+        healthManager.saveVitaminD(amount: amount, date: date) { _ in
             // Update UI immediately with manual addition
             vitaminDCalculator.addManualEntry(amount: amount)
             // Refresh cached Health base and widget

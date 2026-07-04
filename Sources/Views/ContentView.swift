@@ -498,23 +498,25 @@ struct ContentView: View {
             .disabled(uvService.currentUV == 0 && !vitaminDCalculator.isInSun)
             .opacity(uvService.currentUV == 0 && !vitaminDCalculator.isInSun ? 0.6 : 1.0)
             
-            // Manual entry button
+            // Log past exposure button
             Button(action: {
-                // Haptic feedback
                 let impactFeedback = UIImpactFeedbackGenerator(style: .light)
                 impactFeedback.impactOccurred()
-                
                 showManualExposureSheet = true
             }) {
-                Image(systemName: "clock.arrow.circlepath")
-                    .font(.system(size: 24))
-                    .foregroundColor(.white)
-                    .frame(width: 60)
-                    .padding(.vertical, 20)
-                    .background(Color.black.opacity(0.2))
-                    .cornerRadius(15)
+                HStack {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.system(size: 24))
+                    Text("Log Past")
+                        .font(.system(size: 18, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+                .background(Color.black.opacity(0.2))
+                .cornerRadius(15)
             }
-            .disabled(vitaminDCalculator.isInSun) // Can't add manual entry while tracking
+            .disabled(vitaminDCalculator.isInSun)
             .opacity(vitaminDCalculator.isInSun ? 0.4 : 1.0)
         }
     }
